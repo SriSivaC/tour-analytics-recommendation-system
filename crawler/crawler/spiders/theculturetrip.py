@@ -4,10 +4,12 @@ import re
 from requests.models import PreparedRequest
 from crawler.items import CrawlerItem
 
+
 class CultureTripSpider(scrapy.Spider):
     name = "theculturetrip"
 
     scrolled_article = []
+
     base_url = ''
     api_url = ''
     counter = 0
