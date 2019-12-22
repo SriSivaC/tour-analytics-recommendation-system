@@ -1,82 +1,75 @@
 from kafka import KafkaConsumer
+import json
 
-# To consume latest messages and auto-commit offsets
-consumer = KafkaConsumer('scrapy_kafka_item',
-                         bootstrap_servers=['localhost:9092'], auto_offset_reset='earliest', enable_auto_commit=False)
+from fingerprint import hostname_local_fingerprint
+from binascii import unhexlify
+import happybase
 
-for message in consumer:
-    # message value and key are raw bytes -- decode if necessary!
-    # e.g., for unicode: `message.value.decode('utf-8')`
-    print("%s:%d:%d: key=%s value=%s" % (message.topic, message.partition,
-                                         message.offset, message.key,
-                                         message.value))
+from datetime import datetime
+from calendar import timegm
 
-# import happybase
+KAFKA_TOPICS = ["theculturetrip", "tripadvisor_attraction"]
 
-# connection = happybase.Connection(
-#     'localhost', protocol='compact', transport='framed')
-# # connection.create_table(
-# #     'mytable',{'family:qual1': dict(),}
-# # )
-# table = connection.table('mytable')
-
-# table.put(b'row-key', {b'family:qual1': b'value1',
-#                        b'family:qual2': b'value2'})
-
-# row = table.row(b'row-key')
-# print(row[b'family:qual1'])  # prints 'value1'
-
-# # for key, data in table.rows([b'row-key-1', b'row-key-2']):
-#     # print(key, data)  # prints row key and data for each row
-
-# for key, data in table.scan(row_prefix=b'row'):
-#     print(key, data)  # prints 'value1' and 'value2'
+families = {
+    'm': dict(max_versions=1),  # metadata
+    'c': dict(max_versions=1)   # content
+}
 
 
+class HBaseBackend():
+    def __init__(self, connection):
+        self.connection = connection
+
+    def get_table(self, table):
+        return self.connection.table(table)
+
+    def create_table(self, table, schema):
+        self.connection.create_table(table, schema)
+
+    def table_exist(self, kafka_topic):
+        if bytes(kafka_topic, encoding="utf-8") in self.connection.tables():
+            return True
+        else:
+            return False
+
+    def insert_data(self, table, rowkey, data):
+        table.put(unhexlify(hostname_local_fingerprint(rowkey)), data)
+
+    def get_row(self, table, rowkey):
+        return table.row(rowkey)
+
+
+def utcnow_timestamp():
+    return timegm(datetime.utcnow().timetuple())
+
+
+def kafka_to_hbase(kafka_topic):
+    consumer = KafkaConsumer(kafka_topic,
+                             bootstrap_servers=['localhost:9092'], consumer_timeout_ms=5000, auto_offset_reset='earliest', enable_auto_commit=False, value_deserializer=lambda m: json.loads(m.decode('utf-8')))
+    hbase = HBaseBackend(happybase.Connection(
+        'localhost', protocol='compact', transport='framed'))
+
+    for message in consumer:
+        # message value and key are raw bytes -- decode if necessary!
+        # e.g., for unicode: `message.value.decode('utf-8')`
+        # print("%s:%d:%d: key=%s value=%s" % (message.topic, message.partition,
+        #                                      message.offset, message.key,
+        #                                      message.value))
+
+        url = json.loads(json.loads(message.value))[
+            'props']['pageProps']['articleStoreState']['articleData']['data']['link']
+
+        if not hbase.table_exist(kafka_topic):
+            hbase.create_table(kafka_topic, families)
+
+        table = hbase.get_table(kafka_topic)
+
+        hbase.insert_data(table, url, {b'm:url': url})
+        hbase.insert_data(table, url, {b'm:created_at': str(utcnow_timestamp())})
+        hbase.insert_data(table, url, {b'c:content': message.value})
+        
+    print("done.")
 
 
 
-
-
-
-
-
-
-
-# from kafka import KafkaConsumer
-
-# # To consume latest messages and auto-commit offsets
-# consumer = KafkaConsumer('my-topic',
-#                          group_id='my-group',
-#                          bootstrap_servers=['localhost:9092'])
-# for message in consumer:
-#     # message value and key are raw bytes -- decode if necessary!
-#     # e.g., for unicode: `message.value.decode('utf-8')`
-#     print ("%s:%d:%d: key=%s value=%s" % (message.topic, message.partition,
-#                                           message.offset, message.key,
-#                                           message.value))
-
-# # consume earliest available messages, don't commit offsets
-# KafkaConsumer(auto_offset_reset='earliest', enable_auto_commit=False)
-
-# # consume json messages
-# KafkaConsumer(value_deserializer=lambda m: json.loads(m.decode('ascii')))
-
-# # consume msgpack
-# KafkaConsumer(value_deserializer=msgpack.unpackb)
-
-# # StopIteration if no message after 1sec
-# KafkaConsumer(consumer_timeout_ms=1000)
-
-# # Subscribe to a regex topic pattern
-# consumer = KafkaConsumer()
-# consumer.subscribe(pattern='^awesome.*')
-
-# # Use multiple consumers in parallel w/ 0.9 kafka brokers
-# # typically you would run each on a different server / process / CPU
-# consumer1 = KafkaConsumer('my-topic',
-#                           group_id='my-group',
-#                           bootstrap_servers='my.server.com')
-# consumer2 = KafkaConsumer('my-topic',
-#                           group_id='my-group',
-#                           bootstrap_servers='my.server.com')
+kafka_to_hbase(KAFKA_TOPICS[0])
