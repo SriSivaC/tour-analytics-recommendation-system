@@ -36,7 +36,7 @@ class AttractionSpider(scrapy.Spider):
     def parse_attraction(self, response):
         for attr in response.xpath('//div[@data-slot]//div[@class="listing_title"]/a/@href'):
             yield {
-                'attraction_url': attr.extract(),
+                'attraction_url': self.base_url + attr.extract(),
                 'category': response.meta['category'],
             }
 
