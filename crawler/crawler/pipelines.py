@@ -16,6 +16,7 @@ import json
 # from scrapy.utils.serialize import ScrapyJSONEncoder
 # import json
 
+
 class CrawlerPipeline(object):
     def __init__(self, producer, topic):
         self.producer = producer
@@ -26,8 +27,7 @@ class CrawlerPipeline(object):
         # msg = json.dumps(dict(item), ensure_ascii=False)
         # msg = self.encoder.encode(item)
         # print(msg)
-        self.producer.send(
-            self.topic[0], item['data'])
+        self.producer.send(item['topic'], item['data'])
         return item
 
     @classmethod
@@ -39,7 +39,9 @@ class CrawlerPipeline(object):
         """
         hosts = settings.get('KAFKA_HOSTS', ['localhost:9092'])
         topics = settings.get('KAFKA_TOPICS', ['theculturetrip'])
+        # producer = KafkaProducer(
+        #     bootstrap_servers=hosts, value_serializer=lambda m: json.dumps(m).encode('utf-8'))
         producer = KafkaProducer(
-            bootstrap_servers=hosts, value_serializer=lambda m: json.dumps(m).encode('utf-8'))
+            bootstrap_servers=hosts)
 
         return cls(producer, topics)
