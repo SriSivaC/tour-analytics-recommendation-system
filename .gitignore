@@ -1,4 +1,5 @@
 # exclude everything
 .ipynb_checkpoints/*
+crawler/attractions_cat.json
 
 # exception to the rule
