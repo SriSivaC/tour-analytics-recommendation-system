@@ -1,8 +1,8 @@
 import scrapy
-# from scrapy_splash import SplashRequest
 from crawler.items import CrawlerItem
 import json
 import re
+# from scrapy_splash import SplashRequest
 # from requests.models import PreparedRequest
 
 script = """
@@ -26,11 +26,11 @@ class AttractionDetailSpider(scrapy.Spider):
     name = "attr_detail"
 
     # start_urls = ['']
-    base_url = "https://www.tripadvisor.com.my/"
-    api_location_url = "data/1.0/location/"  # required location_id
-    api_prod_activity_url = "data/1.0/attractions/products/activity/"  # required activityId
+    base_url = "https://www.tripadvisor.com.my"
+    api_location_url = "/data/1.0/location/"  # required location_id
+    api_prod_activity_url = "/data/1.0/attractions/products/activity/"  # required activityId
     # required request payload and variables
-    api_query_url = "data/graphql/batched/"
+    api_query_url = "/data/graphql/batched/"
     allowed_domains = ["tripadvisor.com"]
 
     headers = {
@@ -96,3 +96,9 @@ class AttractionDetailSpider(scrapy.Spider):
 #     './/div[contains(@class,"ui_pagination")]/a/@href').extract_first())
 
 # query[0]['variables']['offset'] += 5
+
+
+# Tripadvisor Attractions API
+
+# https://www.tripadvisor.com.my/data/1.0/location/293951
+# https://www.tripadvisor.com.my/data/1.0/attractions/products/activity/12962337

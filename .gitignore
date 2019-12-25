@@ -1,5 +1,8 @@
 # exclude everything
+__pycache__
 .ipynb_checkpoints/*
-crawler/attractions_cat.json
+json/*
+test.*
 
 # exception to the rule
+!json/tripadvisor-api-query.json

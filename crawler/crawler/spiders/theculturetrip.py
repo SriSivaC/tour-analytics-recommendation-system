@@ -92,6 +92,7 @@ class CultureTripSpider(scrapy.Spider):
         # self.i = self.i + 1
         # print('')
         item = CrawlerItem()
+        item['topic'] = "theculturetrip"
         item['data'] = jres
         yield item
         # with open('test.json', 'w') as outfile:

@@ -3,6 +3,8 @@ from kafka.errors import KafkaError
 import msgpack
 import json
 
+# This produce file is an example and learning kafka producer only
+
 producer = KafkaProducer(bootstrap_servers=['localhost:9092'])
 
 # Asynchronous by default

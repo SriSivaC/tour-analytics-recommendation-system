@@ -1,5 +1,7 @@
 import scrapy
 from crawler.items import CrawlerItem
+import json
+from collections import defaultdict
 # from requests.models import PreparedRequest
 
 
@@ -12,33 +14,34 @@ class AttractionSpider(scrapy.Spider):
 
     def start_requests(self):
         urls = [
-            'https://www.tripadvisor.com.my/Attraction_Products-g293951-Malaysia.html',
-        ]
+            'https://www.tripadvisor.com.my/Attraction_Products-g293951-Malaysia.html', ]
         for url in urls:
             yield scrapy.Request(url=url, dont_filter=True, callback=self.parse_category)
 
     def parse_category(self, response):
-        cat = response.xpath('//div[contains(@class, "filter_list_0")]')[0]
-        tour_categories = cat.xpath('./div/label/a/text()')
-        category_links = cat.xpath('./div/label/a/@href')
-        if cat.xpath('./div[contains(@class, "collapse hidden")]'):
-            category_links += cat.xpath(
+        category = response.xpath(
+            '//div[contains(@class, "filter_list_0")]')[0]
+        category_title = category.xpath('./div/label/a/text()')
+        category_link = category.xpath('./div/label/a/@href')
+        if category.xpath('./div[contains(@class, "collapse hidden")]'):
+            category_link += category.xpath(
                 './div[contains(@class, "collapse hidden")]/div/label/a/@href')
-            tour_categories += cat.xpath(
+            category_title += category.xpath(
                 './div[contains(@class, "collapse hidden")]/div/label/a/text()')
 
-        # category_links = [self.base_url + i for i in category_links.extract()]
-        tour_categories = ['_'.join(i.split(' ')[:-1]).lower()
-                           for i in tour_categories.extract()]
-        for i in range(len(category_links)):
-            url = response.urljoin(category_links[i].extract())
-            yield scrapy.Request(url=url, meta={'category': tour_categories[i]}, dont_filter=True, callback=self.parse_attraction)
+        # category_link = [self.base_url + i for i in category_link.extract()]
+        category_title = ['_'.join(i.split(' ')[:-1]).lower()
+                          for i in category_title.extract()]
+        for i in range(len(category_link)):
+            url = response.urljoin(category_link[i].extract())
+            yield scrapy.Request(url=url, meta={'category': category_title[i]}, dont_filter=True, callback=self.parse_attraction)
 
     def parse_attraction(self, response):
-        for attr in response.xpath('//div[contains(@class,"listing_title")]/a/@href'):
-            url = response.urljoin(attr.extract())
+
+        for attraction_path in response.xpath('//div[contains(@class,"listing_title")]/a/@href'):
+            # url = response.urljoin(attraction_path.extract())
             yield {
-                'attraction_url': url,
+                'attraction_url': attraction_path,
                 'category': response.meta['category'],
             }
 
@@ -50,3 +53,20 @@ class AttractionSpider(scrapy.Spider):
                     './a[contains(@class,"nav next")]/@href').extract_first())
                 # next_page.xpath("./a/@data-page-number").extract_first()
                 yield scrapy.Request(url=url, meta={'category': response.meta['category']}, dont_filter=True, callback=self.parse_attraction)
+
+    def merge_json_data(self, src_fpath, dsn_fpath, uni_key, dup_key):
+        with open(src_fpath, 'r') as f:
+            data = json.load(f)
+
+        # Using defaultdic
+        temp = defaultdict(list)
+
+        # Using extend
+        for el in data:
+            temp[el[uni_key]].extend([el[dup_key]])
+
+        data = [{uni_key: x, dup_key: y} for x, y in temp.items()]
+
+        # printing
+        with open(dsn_fpath, 'w') as f:
+            f.write('[\n' + ',\n'.join(json.dumps(i) for i in data) + '\n]')
