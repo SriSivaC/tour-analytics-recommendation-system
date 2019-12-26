@@ -8,13 +8,19 @@ from crawler.items import TheculturetripItem
 class CultureTripSpider(scrapy.Spider):
     name = "theculturetrip"
 
+    custom_settings = {
+        'DOWNLOAD_DELAY': 3,
+        'ITEM_PIPELINES': {
+            'crawler.pipelines.KafkaPipeline': 300,
+        },
+    }
+
     scrolled_article = []
 
     base_url = ''
     api_url = ''
     counter = 0
     total = 0
-    i = 1
 
     headers = {
         'Accept': 'application/json',
@@ -93,7 +99,7 @@ class CultureTripSpider(scrapy.Spider):
         # print('')
         item = TheculturetripItem()
         item['topic'] = "theculturetrip"
-        item['data'] = jres
+        item['data'] = jres.encode('utf-8')
         yield item
         # with open('test.json', 'w') as outfile:
         #     json.dump(jres, outfile, sort_keys=True, indent=4)

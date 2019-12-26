@@ -5,23 +5,19 @@
 # Don't forget to add your pipeline to the ITEM_PIPELINES setting
 # See: https://docs.scrapy.org/en/latest/topics/item-pipeline.html
 
-from scrapy.exceptions import NotConfigured
+# import msgpack
+# from scrapy.utils.serialize import ScrapyJSONEncoder
+
 from kafka import KafkaProducer
 from kafka.errors import KafkaError
-import msgpack
 import json
 
-# from kafka import SimpleClient
-# from kafka.producer import SimpleProducer
-
-# from scrapy.utils.serialize import ScrapyJSONEncoder
-# import json
+from scrapy.exceptions import DropItem
 
 
-class CrawlerPipeline(object):
-    def __init__(self, producer, topic):
+class KafkaPipeline(object):
+    def __init__(self, producer):
         self.producer = producer
-        self.topic = topic
         # self.encoder = ScrapyJSONEncoder()
 
     def process_item(self, item, spider):
@@ -39,15 +35,23 @@ class CrawlerPipeline(object):
         :rtype: A :class:`~KafkaPipeline` instance
         """
 
-        if not settings.getbool('CrawlerPipeline_ENABLED'):
-            # if this isn't specified in settings, the pipeline will be completely disabled
-            raise NotConfigured
-
         hosts = settings.get('KAFKA_HOSTS', ['localhost:9092'])
-        topics = settings.get('KAFKA_TOPICS', ['theculturetrip'])
+        # topics = settings.get('KAFKA_TOPICS', ['theculturetrip'])
+        producer = KafkaProducer(bootstrap_servers=hosts)
         # producer = KafkaProducer(
         #     bootstrap_servers=hosts, value_serializer=lambda m: json.dumps(m).encode('utf-8'))
-        producer = KafkaProducer(
-            bootstrap_servers=hosts)
 
-        return cls(producer, topics)
+        return cls(producer)
+
+
+class DuplicatesUrlPipeline(object):
+
+    def __init__(self):
+        self.ids_seen = set()
+
+    def process_item(self, item, spider):
+        if item['fingerprint'] in self.ids_seen:
+            raise DropItem("Duplicate item found: %s" % item)
+        else:
+            self.ids_seen.add(item['fingerprint'])
+            return item

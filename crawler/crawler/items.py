@@ -19,8 +19,9 @@ class TheculturetripItem(scrapy.Item):
 class AttractionItem(scrapy.Item):
     # define the fields for your item here like:
     # name = scrapy.Field()
-    topic = scrapy.Field()
-    data = scrapy.Field()
+    fingerprint = scrapy.Field()
+    attraction_path = scrapy.Field()
+    category = scrapy.Field()
     pass
 
 

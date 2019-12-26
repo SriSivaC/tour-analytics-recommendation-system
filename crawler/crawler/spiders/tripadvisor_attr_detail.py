@@ -25,6 +25,13 @@ end
 class AttractionDetailSpider(scrapy.Spider):
     name = "attr_detail"
 
+    custom_settings = {
+        'DOWNLOAD_DELAY': 3,
+        'ITEM_PIPELINES': {
+            'crawler.pipelines.KafkaPipeline': 300,
+        },
+    }
+
     # start_urls = ['']
     base_url = "https://www.tripadvisor.com.my"
     api_location_url = "/data/1.0/location/"  # required location_id
@@ -39,16 +46,11 @@ class AttractionDetailSpider(scrapy.Spider):
         "x-requested-by": "TNI1625!AObtWs7+WBUcGGl3nYadc7+VtOuZWqN0FP2DocM82UA8efGHjAnpvxF3SxGefK1Vxqwijl6NoBm9GdDf3PBCcO61s40COv6y/wLrJvI6SiXh+VmFIAqKGlpcvLyfxApCQddrXOcRyEepTAJDkaVFKy6y5ZPR9RSBrZs4BRiKq0UM",
     }
 
-    custom_settings = {
-        'CrawlerPipeline_ENABLED': True,
-        'DOWNLOAD_DELAY': 3
-    }
-
     def start_requests(self):
-        with open('reviews_query.json', 'r') as f:
-            query = json.load(f)
+        with open('json/tripadvisor-api-query.json', 'r') as f:
+            query = [json.load(f)[0]]
 
-        with open('attractions_cat.json', 'r') as f:
+        with open('json/attraction_category.json', 'r') as f:
             urls = json.load(f)
 
         location_id = re.findall(r'g(\d+)', json.dumps(urls))

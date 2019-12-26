@@ -2,6 +2,7 @@ import scrapy
 from crawler.items import AttractionItem
 import json
 from collections import defaultdict
+from backend.fingerprint import hostname_local_fingerprint
 # from requests.models import PreparedRequest
 
 
@@ -13,7 +14,10 @@ class AttractionSpider(scrapy.Spider):
     allowed_domains = ["tripadvisor.com"]
 
     custom_settings = {
-        'CrawlerPipeline_ENABLED': False
+        'DOWNLOAD_DELAY': 3,
+        # 'ITEM_PIPELINES': {
+        #     'crawler.pipelines.DuplicatesUrlPipeline': 300,
+        # },
     }
 
     def start_requests(self):
@@ -44,10 +48,16 @@ class AttractionSpider(scrapy.Spider):
 
         for attraction_path in response.xpath('//div[contains(@class,"listing_title")]/a/@href'):
             # url = response.urljoin(attraction_path.extract())
-            yield {
-                'attraction_url': attraction_path,
-                'category': response.meta['category'],
-            }
+            item = AttractionItem()
+            item['fingerprint'] = hostname_local_fingerprint(attraction_path.extract()).decode('UTF-8')
+            item['attraction_path'] = attraction_path.extract()
+            item['category'] = response.meta['category']
+            yield item
+
+            # yield {
+            #     'attraction_path': attraction_path,
+            #     'category': response.meta['category'],
+            # }
 
         next_page = response.xpath(
             '//div[contains(@class,"unified pagination")]')
