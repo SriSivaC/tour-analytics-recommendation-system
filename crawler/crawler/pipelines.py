@@ -5,6 +5,7 @@
 # Don't forget to add your pipeline to the ITEM_PIPELINES setting
 # See: https://docs.scrapy.org/en/latest/topics/item-pipeline.html
 
+from scrapy.exceptions import NotConfigured
 from kafka import KafkaProducer
 from kafka.errors import KafkaError
 import msgpack
@@ -37,6 +38,11 @@ class CrawlerPipeline(object):
         :type settings: scrapy.settings.Settings
         :rtype: A :class:`~KafkaPipeline` instance
         """
+
+        if not settings.getbool('CrawlerPipeline_ENABLED'):
+            # if this isn't specified in settings, the pipeline will be completely disabled
+            raise NotConfigured
+
         hosts = settings.get('KAFKA_HOSTS', ['localhost:9092'])
         topics = settings.get('KAFKA_TOPICS', ['theculturetrip'])
         # producer = KafkaProducer(

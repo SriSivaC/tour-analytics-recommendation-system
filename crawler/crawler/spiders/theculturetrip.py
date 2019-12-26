@@ -2,7 +2,7 @@ import scrapy
 import json
 import re
 from requests.models import PreparedRequest
-from crawler.items import CrawlerItem
+from crawler.items import TheculturetripItem
 
 
 class CultureTripSpider(scrapy.Spider):
@@ -91,7 +91,7 @@ class CultureTripSpider(scrapy.Spider):
         # print(jres)
         # self.i = self.i + 1
         # print('')
-        item = CrawlerItem()
+        item = TheculturetripItem()
         item['topic'] = "theculturetrip"
         item['data'] = jres
         yield item

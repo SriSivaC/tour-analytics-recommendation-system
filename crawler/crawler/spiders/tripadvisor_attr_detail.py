@@ -1,5 +1,5 @@
 import scrapy
-from crawler.items import CrawlerItem
+from crawler.items import AttrDetailItem
 import json
 import re
 # from scrapy_splash import SplashRequest
@@ -39,6 +39,11 @@ class AttractionDetailSpider(scrapy.Spider):
         "x-requested-by": "TNI1625!AObtWs7+WBUcGGl3nYadc7+VtOuZWqN0FP2DocM82UA8efGHjAnpvxF3SxGefK1Vxqwijl6NoBm9GdDf3PBCcO61s40COv6y/wLrJvI6SiXh+VmFIAqKGlpcvLyfxApCQddrXOcRyEepTAJDkaVFKy6y5ZPR9RSBrZs4BRiKq0UM",
     }
 
+    custom_settings = {
+        'CrawlerPipeline_ENABLED': True,
+        'DOWNLOAD_DELAY': 3
+    }
+
     def start_requests(self):
         with open('reviews_query.json', 'r') as f:
             query = json.load(f)
@@ -66,19 +71,19 @@ class AttractionDetailSpider(scrapy.Spider):
             yield scrapy.Request(url=self.base_url + self.api_query_url, method="POST", dont_filter=True, body=json.dumps(query), headers=self.headers, callback=self.parse_review)
 
     def parse_location(self, response):
-        item = CrawlerItem()
+        item = AttrDetailItem()
         item['topic'] = "tripad_location"
         item['data'] = response.body
         yield item
 
     def parse_activity(self, response):
-        item = CrawlerItem()
+        item = AttrDetailItem()
         item['topic'] = "tripad_activity"
         item['data'] = response.body
         yield item
 
     def parse_review(self, response):
-        item = CrawlerItem()
+        item = AttrDetailItem()
         item['topic'] = "tripad_review"
         item['data'] = response.body
         yield item

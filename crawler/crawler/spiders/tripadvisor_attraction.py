@@ -1,5 +1,5 @@
 import scrapy
-from crawler.items import CrawlerItem
+from crawler.items import AttractionItem
 import json
 from collections import defaultdict
 # from requests.models import PreparedRequest
@@ -11,6 +11,10 @@ class AttractionSpider(scrapy.Spider):
     # start_urls = ['']
     # base_url = "https://tripadvisor.com.my"
     allowed_domains = ["tripadvisor.com"]
+
+    custom_settings = {
+        'CrawlerPipeline_ENABLED': False
+    }
 
     def start_requests(self):
         urls = [
@@ -54,6 +58,7 @@ class AttractionSpider(scrapy.Spider):
                 # next_page.xpath("./a/@data-page-number").extract_first()
                 yield scrapy.Request(url=url, meta={'category': response.meta['category']}, dont_filter=True, callback=self.parse_attraction)
 
+    # post processing of duplicate values
     def merge_json_data(self, src_fpath, dsn_fpath, uni_key, dup_key):
         with open(src_fpath, 'r') as f:
             data = json.load(f)
