@@ -1,0 +1,77 @@
+[
+    [
+        {
+            "query": "query FullReviewListQuery( $locationId: Int! $offset: Int $limit: Int $filters: [FilterConditionInput!] $prefs: ReviewListPrefsInput $initialPrefs: ReviewListPrefsInput $filterCacheKey: String $prefsCacheKey: String ) { locations(locationIds: [$locationId]) { reviewListPage( page: { offset: $offset, limit: $limit } filters: $filters prefs: $prefs initialPrefs: $initialPrefs filterCacheKey: $filterCacheKey prefsCacheKey: $prefsCacheKey ) { __typename totalCount preferredReviewIds reviews { ... on Review { __typename id locationId userId mcid mtProviderId username title rating createdDate publishedDate text url status language originalLanguage labels alertStatus translationType roomTip attribution helpfulVotes photoIds connectionToSubject tripInfo { __typename stayDate tripType } additionalRatings { __typename rating ratingLabel } mgmtResponse { __typename id text language publishedDate username connectionToSubject translationType } photos { __typename id statuses photoSizes { url width height } } original { __typename id url locationId userId language submissionDomain } provider { __typename isLocalProvider isToolsProvider } route { __typename url } socialStatistics { __typename followCount isFollowing isLiked isReposted isSaved likeCount repostCount tripCount } location { __typename locationId parentGeoId name placeType ... on LocationInformation { accommodationCategory url currentUserOwnerStatus { __typename isValid } } reviewSummary { __typename rating count } reviewAggregations { __typename ratingCounts languageCounts } additionalNames { __typename normal long longOnlyParent longParentAbbreviated longOnlyParentAbbreviated longParentStateAbbreviated longOnlyParentStateAbbreviated geo abbreviated abbreviatedRaw abbreviatedStateTerritory abbreviatedStateTerritoryRaw } parent { locationId additionalNames { __typename normal long longOnlyParent longParentAbbreviated longOnlyParentAbbreviated longParentStateAbbreviated longOnlyParentStateAbbreviated geo abbreviated abbreviatedRaw abbreviatedStateTerritory abbreviatedStateTerritoryRaw } } } userProfile { __typename id userId: id displayName username isMe isVerified avatar { __typename id photoSizes { __typename url width height } } hometown { __typename locationId fallbackString location { __typename locationId additionalNames { __typename long } name } } contributionCounts { __typename sumAllUgc helpfulVote } route { __typename url } isFollowing } } } } } } ",
+            "variables": {
+                "locationId": 12962337,
+                "offset": 0,
+                "filters": [
+                    {
+                        "axis": "LANGUAGE",
+                        "selections": [
+                            "en"
+                        ]
+                    }
+                ],
+                "prefs": null,
+                "initialPrefs": {},
+                "limit": 1,
+                "filterCacheKey": null,
+                "prefsCacheKey": "locationReviewPrefs"
+            }
+        }
+    ],
+    [
+        {
+            "query": "query ReviewListQuery( $locationId: Int! $offset: Int $limit: Int $filters: [FilterConditionInput!] $prefs: ReviewListPrefsInput $initialPrefs: ReviewListPrefsInput $filterCacheKey: String $prefsCacheKey: String ) { locations(locationIds: [$locationId]) { reviewListPage( page: { offset: $offset, limit: $limit } filters: $filters prefs: $prefs initialPrefs: $initialPrefs filterCacheKey: $filterCacheKey prefsCacheKey: $prefsCacheKey ) { __typename totalCount reviews { ... on Review { __typename id locationId userId username title rating createdDate publishedDate text url status language roomTip attribution helpfulVotes tripInfo { __typename stayDate tripType } additionalRatings { __typename rating ratingLabel } location { __typename locationId name placeType ... on LocationInformation { url } reviewSummary { __typename rating count } } userProfile { __typename id userId: id displayName username hometown { __typename fallbackString location { __typename locationId additionalNames { __typename longOnlyParent geo } } } route { __typename url } } } } } } } ",
+            "variables": {
+                "locationId": 12962337,
+                "offset": 0,
+                "filters": [
+                    {
+                        "axis": "LANGUAGE",
+                        "selections": [
+                            "en"
+                        ]
+                    }
+                ],
+                "prefs": null,
+                "initialPrefs": {},
+                "limit": 1,
+                "filterCacheKey": null,
+                "prefsCacheKey": "locationReviewPrefs"
+            }
+        }
+    ],
+    [
+        {
+            "query": "query HotelListQuery($locationId: Int!) { locations(locationIds: [$locationId]) { __typename locationId name detail { __typename ... on Hotel { __typename styleRankings(max: -1) { __typename tagId tagName geoRanking score } hotel { __typename details { __typename numRooms } } priceRange(currencyCode: \"MYR\") { __typename minimum maximum } amenityList( prioritizeUserFilteredAmenities: true showOnlyHighlightedAmenities: true ) { __typename highlightedAmenities { __typename roomAmenities { __typename tagId amenityNameLocalized amenityCategoryName } roomFeatures { __typename tagId amenityNameLocalized amenityCategoryName } roomTypes { __typename tagId amenityNameLocalized amenityCategoryName } propertyAmenities { __typename tagId amenityNameLocalized amenityCategoryName } } nonHighlightedAmenities { __typename roomAmenities { __typename tagId amenityNameLocalized amenityCategoryName } roomFeatures { __typename tagId amenityNameLocalized amenityCategoryName } roomTypes { __typename tagId amenityNameLocalized amenityCategoryName } propertyAmenities { __typename tagId amenityNameLocalized amenityCategoryName } } } } } } } ",
+            "variables": {
+                "locationId": 478297
+            }
+        }
+    ],
+    [
+        {
+            "__comment": "This is example of error when request a large list from tripadvisor graphql",
+            "errors": [
+                {
+                    "message": "Error #1720946178",
+                    "locations": [
+                        {
+                            "line": 1,
+                            "column": 257
+                        }
+                    ]
+                }
+            ],
+            "data": {
+                "locations": [
+                    {
+                        "reviewListPage": null
+                    }
+                ]
+            }
+        }
+    ]
+]

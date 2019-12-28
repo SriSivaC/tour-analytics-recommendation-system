@@ -1,4 +1,3 @@
-
 # Tripadvisor Restaurants API
 
 # https://www.tripadvisor.com.my/data/1.0/location/8381685

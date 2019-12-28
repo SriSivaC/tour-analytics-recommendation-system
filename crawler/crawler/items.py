@@ -31,3 +31,10 @@ class AttrDetailItem(scrapy.Item):
     topic = scrapy.Field()
     data = scrapy.Field()
     pass
+
+class HotelItem(scrapy.Item):
+    # define the fields for your item here like:
+    # name = scrapy.Field()
+    topic = scrapy.Field()
+    data = scrapy.Field()
+    pass

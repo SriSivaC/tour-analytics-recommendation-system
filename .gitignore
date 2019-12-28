@@ -5,4 +5,4 @@ crawler/json/*
 test.*
 
 # exception to the rule
-!crawler/json/tripadvisor-api-query.json
+!crawler/json/tripadvisor-graphql-query.json
