@@ -16,11 +16,16 @@ from scrapy.exceptions import DropItem
 
 
 class KafkaPipeline(object):
-    # Notes: You have configured with the max_request_size configuration as following:
-    # server.properties, message.max.bytes=20971520
-    # server.properties, replica.fetch.max.bytes=20971520
-    # producer.properties, max.request.size=20971520 
-    # consumer.properties, max.partition.fetch.bytes =20971520 
+    """
+    Notes: You have configured with the max_request_size configuration as following:
+    server.properties,      replica.fetch.max.bytes=20971520 
+                            message.max.bytes=20971520
+                            max.message.bytes=20971520
+                            max.request.size=20971520
+    producer.properties,    max.request.size=20971520 
+    consumer.properties,    max.partition.fetch.bytes=20971520 
+                            fetch.message.max.bytes=20971520
+    """
 
     def __init__(self, producer):
         self.producer = producer
@@ -43,7 +48,8 @@ class KafkaPipeline(object):
 
         hosts = settings.get('KAFKA_HOSTS', ['localhost:9092'])
         # topics = settings.get('KAFKA_TOPICS', ['theculturetrip'])
-        producer = KafkaProducer(bootstrap_servers=hosts, max_request_size=20971520)
+        producer = KafkaProducer(
+            bootstrap_servers=hosts, max_request_size=20971520)
         # producer = KafkaProducer(
         #     bootstrap_servers=hosts, value_serializer=lambda m: json.dumps(m).encode('utf-8'))
 
