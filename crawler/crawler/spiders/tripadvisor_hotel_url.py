@@ -7,7 +7,7 @@ from backend.fingerprint import hostname_local_fingerprint
 
 
 class HotelSpider(scrapy.Spider):
-    name = "hotel_url"  # scrapy crawl hotel_url -o json/hotel_url.json
+    name = "tripadvisor_hotel_url"  # scrapy crawl hotel_url -o json/tripadvisor_hotel_url.json
 
     # start_urls = ['']
     base_url = "https://www.tripadvisor.com.my"
@@ -17,9 +17,9 @@ class HotelSpider(scrapy.Spider):
     allowed_domains = ["tripadvisor.com"]
 
     custom_settings = {
-        'JOBDIR': 'crawls/hotelspider-url',
+        'JOBDIR': 'crawls/tripadvisor_hotel_url',
         'DOWNLOAD_DELAY': 1,
-        'LOG_FILE': 'hotel_url.log',
+        'LOG_FILE': 'tripadvisor_hotel_url.log',
         'ITEM_PIPELINES': {
             'crawler.pipelines.DuplicatesUrlPipeline': 300,
         },

@@ -7,7 +7,7 @@ import re
 
 
 class HotelSpider(scrapy.Spider):
-    name = "hotel_detail"
+    name = "tripadvisor_hotel_detail"   # scrapy crawl tripadvisor_hotel_detail
 
     # start_urls = ['']
     base_url = "https://www.tripadvisor.com.my"
@@ -17,12 +17,13 @@ class HotelSpider(scrapy.Spider):
     allowed_domains = ["tripadvisor.com"]
 
     custom_settings = {
-        'JOBDIR': 'crawls/hotelspider-1',
-        'DOWNLOAD_DELAY': 1,
-        'LOG_FILE': 'hotel.log',
-        # 'ITEM_PIPELINES': {
-        #     'crawler.pipelines.KafkaPipeline': 300,
-        # },
+        'JOBDIR': 'crawls/tripadvisor_hotel_detail',
+        'DOWNLOAD_DELAY': 1.5,
+        'LOG_FILE': 'tripadvisor_hotel_detail.log',
+        'LOG_LEVEL': 'INFO',
+        'ITEM_PIPELINES': {
+            'crawler.pipelines.KafkaPipeline': 300,
+        },
     }
 
     headers = {
@@ -34,75 +35,49 @@ class HotelSpider(scrapy.Spider):
     unwantedKey = ["timezone", "awards", "doubleclick_zone", "preferred_map_engine", "subcategory_type", "subcategory_type_label",
                    "bearing", "business_listings", "special_offers", "write_review", "subcategory", "is_jfy_enabled", "nearest_metro_station", "is_candidate_for_contact_info_suppression"]
 
-    with open("json/tripadvisor-graphql-query.json", 'r') as f:
-        query = json.load(f)
-    reviewListQuery = query[1]
-    hotelListQuery = query[2]
+    reviewListQuery = []
+    hotelListQuery = []
 
     def start_requests(self):
-        urls = ['https://www.tripadvisor.com.my/Hotels-g293951-Malaysia-Hotels.html', ]
-        for url in urls:
-            yield scrapy.Request(url=url, dont_filter=True, callback=self.parseHotelCity)
 
-    def parseHotelCity(self, response):
+        with open("json/tripadvisor-graphql-query.json", 'r') as f:
+            query = json.load(f)
+        self.reviewListQuery = query[1]
+        self.hotelListQuery = query[2]
 
-        hotelCityList = response.xpath('//*[@data-geoid]/@href').extract()
+        with open('json/tripadvisor_hotel_url.json', 'r') as f:
+            hrefs = json.load(f)
+        hrefs = [href["href"] for href in hrefs]
 
-        for cityHref in hotelCityList:
-            cityHref = response.urljoin(cityHref)
-            yield scrapy.Request(url=cityHref, dont_filter=True, callback=self.parseHotelItem)
+        locationIdList = re.findall(r'd(\d+)', json.dumps(hrefs))
+        # locationIdList = list(dict.fromkeys(locationIdList))    # Remove duplicate locatioId
 
-        hotelCityPaginationXpath = response.xpath(
-            '//*[contains(@class,"leaf_geo_pagination")]')
-        nextHotelCityPageHref = hotelCityPaginationXpath.xpath(
-            './/a[contains(@class,"next")]/@href').extract_first()
-
-        if nextHotelCityPageHref is not None:
-            print("Requesting nextHotelCityPageHref: " + nextHotelCityPageHref)
+        for locationId in locationIdList:
+            self.hotelListQuery[0]["variables"]["locationId"] = locationId
+            print("Requesting HotelInfo of locationId: " + locationId)
             self.logger.info(
-                "Requesting nextHotelCityPageHref: " + nextHotelCityPageHref)
-            nextHotelCityPageHref = response.urljoin(nextHotelCityPageHref)
-            yield scrapy.Request(url=nextHotelCityPageHref, dont_filter=True, callback=self.parseHotelCity)
+                "Requesting HotelInfo of locationId: " + locationId)
+            url = self.base_url + self.api_location_url + locationId
+            yield scrapy.Request(url=url, dont_filter=True, callback=self.parseHotelInfo)
 
-    def parseHotelItem(self, response):
-        hotelItemContainerXpath = response.xpath(
-            '//*[contains(@id,"taplc_hsx_hotel_list_lite_dusty_hotels_combined_sponsored_0")]')
-        hotelUrlList = hotelItemContainerXpath.xpath('.//@data-url').extract()
-        hotelUrlList = list(dict.fromkeys(hotelUrlList))  # remove duplicate urls
+        # for locationId in locationIdList:
+            self.reviewListQuery[0]["variables"]["locationId"] = locationId
+            self.reviewListQuery[0]["variables"]["limit"] = -1
 
-        for url in hotelUrlList:
-            yield url
+            print("Requesting HotelReview of locationId: " +
+                  self.reviewListQuery[0]["variables"]["locationId"])
+            self.logger.info("Requesting HotelReview of locationId: " +
+                             self.reviewListQuery[0]["variables"]["locationId"])
 
-        # for url in hotelUrlList:
-        #     locationId = re.findall(r'd(\d+)', url)[0]
-        #     url = self.base_url + self.api_location_url + str(locationId)
-        #     self.hotelListQuery[0]["variables"]["locationId"] = locationId
-        #     yield scrapy.Request(url=url, dont_filter=True, callback=self.parseHotel)
+            url = self.base_url + self.api_query_url
+            yield scrapy.Request(url=url, method="POST", dont_filter=True, body=json.dumps(self.reviewListQuery), headers=self.headers, callback=self.parseHotelReview)
 
-        # for url in hotelUrlList:
-        #     locationId = re.findall(r'd(\d+)', url)[0]
-        #     self.reviewListQuery[0]["variables"]["locationId"] = locationId
-        #     self.reviewListQuery[0]["variables"]["limit"] = -1
-        #     print("Requesting HotelReview of locationId: " + self.reviewListQuery[0]["variables"]["locationId"])
-        #     yield scrapy.Request(url=self.base_url + self.api_query_url, method="POST", dont_filter=True, body=json.dumps(self.reviewListQuery), headers=self.headers, callback=self.parseHotelReview)
-
-        hotelItemPaginationXpath = response.xpath(
-            '//*[contains(@class,"standard_pagination")]')
-        nextHotelItemPageHref = hotelItemPaginationXpath.xpath(
-            './/a[contains(@class,"next")]/@href').extract_first()
-
-        if nextHotelItemPageHref is not None:
-            print("Requesting nextHotelItemPageHref: " + nextHotelItemPageHref)
-            self.logger.info(
-                "Requesting nextHotelItemPageHref: " + nextHotelItemPageHref)
-            nextHotelItemPageHref = response.urljoin(nextHotelItemPageHref)
-            yield scrapy.Request(url=nextHotelItemPageHref, dont_filter=True, callback=self.parseHotelItem)
-
-    def parseHotel(self, response):
+    def parseHotelInfo(self, response):
         data = json.loads(response.body.decode("utf-8"))
         for key in self.unwantedKey:
             data.pop(key, None)
-        yield scrapy.Request(url=self.base_url + self.api_query_url, meta={'hotelInfo': data}, method="POST", dont_filter=True, body=json.dumps(self.hotelListQuery), headers=self.headers, callback=self.parseHotelDetail)
+        url = self.base_url + self.api_query_url
+        yield scrapy.Request(url=url, meta={'hotelInfo': data}, method="POST", dont_filter=True, body=json.dumps(self.hotelListQuery), headers=self.headers, callback=self.parseHotelDetail)
 
     def parseHotelDetail(self, response):
         hotelInfo = response.meta["hotelInfo"]
@@ -120,27 +95,31 @@ class HotelSpider(scrapy.Spider):
         yield item
 
     def parseHotelReview(self, response):
-        # data = json.loads(response.body.decode("utf-8"))
-        # attemp = 0
-        # if data[0]["data"]["locations"][0]["reviewListPage"] is not None:
-        print("Get HotelReview Success of locationId: " +
-              self.reviewListQuery[0]["variables"]["locationId"])
-        self.logger.info("Get HotelReview Success of locationId: " +
-                         self.reviewListQuery[0]["variables"]["locationId"])
+        data = json.loads(response.body.decode("utf-8"))
+        attemp = 0
+        if data[0]["data"]["locations"][0]["reviewListPage"] is not None:
+            data[0].pop("errors", None)
+            locationId = data[0]["data"]["locations"][0]["locationId"]
 
-        # item = HotelReviewItem()
-        # item['topic'] = "tripad_hotel_review"
-        # item['data'] = response.body
-        # yield item
-        # else:
-        #     self.logger.info("Retry retrieving review list of locationId: %s",
-        #                      self.reviewListQuery[0]["variables"]["locationId"])
-        #     attemp += 1
-        #     if attemp < 3:
-        #         yield scrapy.Request(url=self.base_url + self.api_query_url, method="POST", dont_filter=True, body=json.dumps(self.reviewListQuery), headers=self.headers, callback=self.parseHotelReview)
-        #     else:
-        #         self.logger.info("Error retrieving review list of locationId: %s",
-        #                          self.reviewListQuery[0]["variables"]["locationId"])
+            print("Get HotelReview Success of locationId: " + str(locationId))
+            self.logger.info(
+                "Get HotelReview Success of locationId: " + str(locationId))
+
+            item = HotelReviewItem()
+            item['topic'] = "tripad_hotel_review"
+            item['data'] = json.dumps(data).encode("utf-8")
+            yield item
+
+        else:
+            self.logger.info("Retry retrieving review list of locationId: %s",
+                             self.reviewListQuery[0]["variables"]["locationId"])
+            attemp += 1
+            if attemp < 3:
+                yield scrapy.Request(url=self.base_url + self.api_query_url, method="POST", dont_filter=True, body=json.dumps(self.reviewListQuery), headers=self.headers, callback=self.parseHotelReview)
+            else:
+                self.logger.info("Error retrieving review list of locationId: %s",
+                                 self.reviewListQuery[0]["variables"]["locationId"])
 
 # https://www.tripadvisor.com.my/data/1.0/location/293951
 # https://www.tripadvisor.com.my/data/1.0/hotelDetail/614528/heatMap
+# 305326, 614528

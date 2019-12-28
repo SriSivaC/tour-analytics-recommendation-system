@@ -43,7 +43,7 @@ class KafkaPipeline(object):
 
         hosts = settings.get('KAFKA_HOSTS', ['localhost:9092'])
         # topics = settings.get('KAFKA_TOPICS', ['theculturetrip'])
-        producer = KafkaProducer(bootstrap_servers=hosts)
+        producer = KafkaProducer(bootstrap_servers=hosts, max_request_size=20971520)
         # producer = KafkaProducer(
         #     bootstrap_servers=hosts, value_serializer=lambda m: json.dumps(m).encode('utf-8'))
 
