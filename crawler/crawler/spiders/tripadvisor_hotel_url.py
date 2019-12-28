@@ -2,7 +2,7 @@ import scrapy
 from crawler.items import HotelUrlItem
 import json
 import re
-# from backend.fingerprint import hostname_local_fingerprint
+from backend.fingerprint import hostname_local_fingerprint
 # from requests.models import PreparedRequest
 
 
@@ -20,9 +20,9 @@ class HotelSpider(scrapy.Spider):
         'JOBDIR': 'crawls/hotelspider-url',
         'DOWNLOAD_DELAY': 1,
         'LOG_FILE': 'hotel_url.log',
-        # 'ITEM_PIPELINES': {
-        #     'crawler.pipelines.KafkaPipeline': 300,
-        # },
+        'ITEM_PIPELINES': {
+            'crawler.pipelines.DuplicatesUrlPipeline': 300,
+        },
     }
 
     headers = {
@@ -59,11 +59,11 @@ class HotelSpider(scrapy.Spider):
         hotelItemContainerXpath = response.xpath(
             '//*[contains(@id,"taplc_hsx_hotel_list_lite_dusty_hotels_combined_sponsored_0")]')
         hotelHrefList = hotelItemContainerXpath.xpath('.//@data-url').extract()
-        hotelHrefList = list(dict.fromkeys(hotelHrefList)
-                             )  # remove duplicate urls
+        # hotelHrefList = list(dict.fromkeys(hotelHrefList))  # remove duplicate urls
 
         for href in hotelHrefList:
             item = HotelUrlItem()
+            item['fingerprint'] = hostname_local_fingerprint(href).decode('UTF-8')
             item['href'] = href
             yield item
 

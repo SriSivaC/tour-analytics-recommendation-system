@@ -35,6 +35,7 @@ class AttrDetailItem(scrapy.Item):
 class HotelUrlItem(scrapy.Item):
     # define the fields for your item here like:
     # name = scrapy.Field()
+    fingerprint = scrapy.Field()
     href = scrapy.Field()
     pass
 
