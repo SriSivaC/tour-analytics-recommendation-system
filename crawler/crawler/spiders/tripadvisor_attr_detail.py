@@ -53,31 +53,31 @@ class AttractionDetailSpider(scrapy.Spider):
 
     unwantedKey = ["highlights", "obfuscatedViatorCommerceLink"]
 
-    reviewListQuery = []
+    # reviewListQuery = []
 
     def start_requests(self):
         with open('json/tripadvisor-api-query.json', 'r') as f:
-            query = [json.load(f)[0]]
+            reviewListQuery = [json.load(f)[0]]
 
         with open('json/tripadvisor_attr_url_cat.json', 'r') as f:
             hrefs = json.load(f)
 
-        location_id = re.findall(r'g(\d+)', json.dumps(hrefs))
-        location_id = list(dict.fromkeys(location_id))
-        location_id_list = [self.base_url + self.api_location_url + i for i in location_id]
+        locationIdList = re.findall(r'g(\d+)', json.dumps(hrefs))
+        locationIdList = list(dict.fromkeys(locationIdList))  # remove duplicate locationId
+        locationIdList = [self.base_url + self.api_location_url + i for i in locationIdList]
 
-        activityId = re.findall(r'd(\d+)', json.dumps(hrefs))
-        activityId = list(dict.fromkeys(activityId))
-        activityId_list = [self.base_url + self.api_prod_activity_url + i for i in activityId]
+        activityIdList = re.findall(r'd(\d+)', json.dumps(hrefs))
+        activityIdList = list(dict.fromkeys(activityIdList))
+        activityIdList = [self.base_url + self.api_prod_activity_url + i for i in activityIdList]
 
-        for url in location_id_list:
+        for url in locationIdList:
             yield scrapy.Request(url=url, dont_filter=True, callback=self.parse_location)
 
-        for i in range(len(activityId_list)):
-            yield scrapy.Request(url=activityId_list[i], dont_filter=True, callback=self.parse_activity)
+        for i in range(len(activityIdList)):
+            yield scrapy.Request(url=activityIdList[i], dont_filter=True, callback=self.parse_activity)
 
-            query[0]['variables']['locationId'] = activityId[i]  # activityId
-            yield scrapy.Request(url=self.base_url + self.api_query_url, method="POST", dont_filter=True, body=json.dumps(query), headers=self.headers, callback=self.parse_review)
+            reviewListQuery[0]['variables']['locationId'] = activityIdList[i]  # activityId
+            yield scrapy.Request(url=self.base_url + self.api_query_url, method="POST", dont_filter=True, body=json.dumps(reviewListQuery), headers=self.headers, callback=self.parse_review)
 
     def parse_location(self, response):
         item = AttrDetailItem()
