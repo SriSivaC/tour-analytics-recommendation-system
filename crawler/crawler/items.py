@@ -19,13 +19,26 @@ class TheculturetripItem(scrapy.Item):
 class AttractionHrefCatItem(scrapy.Item):
     # define the fields for your item here like:
     # name = scrapy.Field()
-    fingerprint = scrapy.Field()
     href = scrapy.Field()
     category = scrapy.Field()
     pass
 
 
-class AttrDetailItem(scrapy.Item):
+class AttractionLocationItem(scrapy.Item):
+    # define the fields for your item here like:
+    # name = scrapy.Field()
+    topic = scrapy.Field()
+    data = scrapy.Field()
+    pass
+
+class AttractionActivityItem(scrapy.Item):
+    # define the fields for your item here like:
+    # name = scrapy.Field()
+    topic = scrapy.Field()
+    data = scrapy.Field()
+    pass
+
+class AttractionReviewItem(scrapy.Item):
     # define the fields for your item here like:
     # name = scrapy.Field()
     topic = scrapy.Field()

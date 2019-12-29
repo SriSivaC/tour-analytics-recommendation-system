@@ -21,7 +21,7 @@ class HotelSpider(scrapy.Spider):
         'JOBDIR': 'crawls/tripadvisor_hotel_href',
         'LOG_FILE': 'tripadvisor_hotel_href.log',
         'LOG_LEVEL': 'INFO',
-        'DOWNLOAD_DELAY': 1,
+        'DOWNLOAD_DELAY': 3,
         'ITEM_PIPELINES': {
             'crawler.pipelines.DuplicatesUrlPipeline': 300,
         },
@@ -42,6 +42,9 @@ class HotelSpider(scrapy.Spider):
         hotelCityList = response.xpath('//*[@data-geoid]/@href').extract()
 
         for cityHref in hotelCityList:
+            print("[Loading] Requesting cityHref of href: " + cityHref)
+            self.logger.info("[Loading] Requesting cityHref of href: " + cityHref)
+
             cityHref = response.urljoin(cityHref)
             yield scrapy.Request(url=cityHref, dont_filter=True, callback=self.parseHotelItem)
 
@@ -49,8 +52,9 @@ class HotelSpider(scrapy.Spider):
         nextHotelCityPageHref = hotelCityPaginationXpath.xpath('.//a[contains(@class,"next")]/@href').extract_first()
 
         if nextHotelCityPageHref is not None:
-            print("Requesting nextHotelCityPageHref: " + nextHotelCityPageHref)
-            self.logger.info("Requesting nextHotelCityPageHref: " + nextHotelCityPageHref)
+            print("[Loading] Requesting nextHotelCityPageHref of href: " + nextHotelCityPageHref)
+            self.logger.info("[Loading] Requesting nextHotelCityPageHref of href: " + nextHotelCityPageHref)
+
             nextHotelCityPageHref = response.urljoin(nextHotelCityPageHref)
             yield scrapy.Request(url=nextHotelCityPageHref, dont_filter=True, callback=self.parseHotelCity)
 
@@ -65,15 +69,17 @@ class HotelSpider(scrapy.Spider):
             item['href'] = href
             yield item
 
-            print("Get HotelHref Success of href: " + href)
-            self.logger.info("Get HotelHref Success of href: " + href)
+            print("[Success] Get HotelHref of href: " + href)
+            self.logger.info("[Success] Get HotelHref of href: " + href)
 
-        hotelItemPaginationXpath = response.xpath('//*[contains(@class,"standard_pagination")]')
+        # hotelItemPaginationXpath = response.xpath('//*[contains(@class,"standard_pagination")]') 
+        hotelItemPaginationXpath = response.xpath('//*[contains(@class,"listFooter")]') 
         nextHotelItemPageHref = hotelItemPaginationXpath.xpath('.//a[contains(@class,"next")]/@href').extract_first()
 
         if nextHotelItemPageHref is not None:
-            print("Requesting nextHotelItemPageHref: " + nextHotelItemPageHref)
-            self.logger.info("Requesting nextHotelItemPageHref: " + nextHotelItemPageHref)
+            print("[Loading] Requesting nextHotelItemPageHref of href: " + nextHotelItemPageHref)
+            self.logger.info("[Loading] Requesting nextHotelItemPageHref of href: " + nextHotelItemPageHref)
+            
             nextHotelItemPageHref = response.urljoin(nextHotelItemPageHref)
             yield scrapy.Request(url=nextHotelItemPageHref, dont_filter=True, callback=self.parseHotelItem)
 

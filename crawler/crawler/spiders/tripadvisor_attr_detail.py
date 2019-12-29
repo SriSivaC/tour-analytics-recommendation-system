@@ -1,5 +1,5 @@
 import scrapy
-from crawler.items import AttrDetailItem
+from crawler.items import AttractionLocationItem, AttractionActivityItem, AttractionReviewItem
 import json
 import re
 # from scrapy_splash import SplashRequest
@@ -24,7 +24,7 @@ end
 
 class AttractionDetailSpider(scrapy.Spider):
     # scrapy crawl tripadvisor_attr_detail
-    # dependency files - json/tripadvisor-graphql-query.json, json/tripadvisor_attr_url_cat.json
+    # dependency files - json/tripadvisor-graphql-query.json, json/tripadvisor_attr_href_cat.json
     name = "tripadvisor_attr_detail"
 
     # start_urls = ['']
@@ -51,55 +51,80 @@ class AttractionDetailSpider(scrapy.Spider):
         "x-requested-by": "TNI1625!AObtWs7+WBUcGGl3nYadc7+VtOuZWqN0FP2DocM82UA8efGHjAnpvxF3SxGefK1Vxqwijl6NoBm9GdDf3PBCcO61s40COv6y/wLrJvI6SiXh+VmFIAqKGlpcvLyfxApCQddrXOcRyEepTAJDkaVFKy6y5ZPR9RSBrZs4BRiKq0UM",
     }
 
-    unwantedKey = ["highlights", "obfuscatedViatorCommerceLink"]
-
-    # reviewListQuery = []
+    unwantedLocationKey = ["awards", "doubleclick_zone", "preferred_map_engine", "is_jfy_enabled",
+                           "nearest_metro_station", "has_restaurant_coverpage", "has_attraction_coverpage", "has_curated_shopping_list", ""]
+    unwantedActivityKey = ["highlights", "obfuscatedViatorCommerceLink"]
 
     def start_requests(self):
-        with open('json/tripadvisor-api-query.json', 'r') as f:
-            reviewListQuery = [json.load(f)[0]]
+        with open('json/tripadvisor-graphql-query.json', 'r') as f:
+            reviewListQuery = json.load(f)[1]
 
-        with open('json/tripadvisor_attr_url_cat.json', 'r') as f:
-            hrefs = json.load(f)
+        with open('json/tripadvisor_attr_href_cat.json', 'r') as f:
+            attractionHrefList = json.load(f)
 
-        locationIdList = re.findall(r'g(\d+)', json.dumps(hrefs))
+        locationIdList = re.findall(r'g(\d+)', json.dumps(attractionHrefList))
         locationIdList = list(dict.fromkeys(locationIdList))  # remove duplicate locationId
-        locationIdList = [self.base_url + self.api_location_url + i for i in locationIdList]
+        # locationIdList = [self.base_url + self.api_location_url + i for i in locationIdList]
 
-        activityIdList = re.findall(r'd(\d+)', json.dumps(hrefs))
+        activityIdList = re.findall(r'd(\d+)', json.dumps(attractionHrefList))
         activityIdList = list(dict.fromkeys(activityIdList))
-        activityIdList = [self.base_url + self.api_prod_activity_url + i for i in activityIdList]
+        # activityIdList = [self.base_url + self.api_prod_activity_url + i for i in activityIdList]
 
-        for url in locationIdList:
-            yield scrapy.Request(url=url, dont_filter=True, callback=self.parse_location)
+        for locationId in locationIdList:
+            print("[Loading] Requesting Location of locationId: " + str(locationId))
+            self.logger.info("[Loading] Requesting Location of locationId: " + str(locationId))
 
-        for i in range(len(activityIdList)):
-            yield scrapy.Request(url=activityIdList[i], dont_filter=True, callback=self.parse_activity)
+            url = self.base_url + self.api_location_url + str(locationId)
+            yield scrapy.Request(url=url, meta={'locationId': locationId}, dont_filter=True, callback=self.parseLocation)
 
-            reviewListQuery[0]['variables']['locationId'] = activityIdList[i]  # activityId
-            yield scrapy.Request(url=self.base_url + self.api_query_url, method="POST", dont_filter=True, body=json.dumps(reviewListQuery), headers=self.headers, callback=self.parse_review)
+        for activityId in activityIdList:
+            print("[Loading] Requesting Activity of activityId: " + str(activityId))
+            self.logger.info("[Loading] Requesting Activity of activityId: " + str(activityId))
 
-    def parse_location(self, response):
-        item = AttrDetailItem()
-        item['topic'] = "tripad_location"
-        item['data'] = response.body
-        yield item
+            url = self.base_url + self.api_prod_activity_url + str(activityId)
+            yield scrapy.Request(url=url, meta={'activityId': activityId}, dont_filter=True, callback=self.parseActivity)
 
-    def parse_activity(self, response):
+            print("[Loading] Requesting Review of activityId: " + str(activityId))
+            self.logger.info("[Loading] Requesting Review of activityId: " + str(activityId))
+
+            reviewListQuery[0]['variables']['locationId'] = activityId  # activityId
+            yield scrapy.Request(url=self.base_url + self.api_query_url, meta={'activityId': activityId}, method="POST", dont_filter=True, body=json.dumps(reviewListQuery), headers=self.headers, callback=self.parseReview)
+
+    def parseLocation(self, response):
         data = json.loads(response.body.decode("utf-8"))
-        for key in self.unwantedKey:
+        for key in self.unwantedLocationKey:
             data.pop(key, None)
 
-        item = AttrDetailItem()
-        item['topic'] = "tripad_activity"
+        item = AttractionLocationItem()
+        item['topic'] = "tripad_attr_location"
+        item['data'] = json.dumps(data).encode("utf-8")
+        yield item
+        
+        print("[Success] Get Location of locationId: " + str(response.meta['locationId']))
+        self.logger.info("[Success] Get Location of locationId: " + str(response.meta['locationId']))
+
+    def parseActivity(self, response):
+        data = json.loads(response.body.decode("utf-8"))
+        for key in self.unwantedActivityKey:
+            data.pop(key, None)
+
+        item = AttractionActivityItem()
+        item['topic'] = "tripad_attr_activity"
         item['data'] = json.dumps(data).encode("utf-8")
         yield item
 
-    def parse_review(self, response):
-        item = AttrDetailItem()
-        item['topic'] = "tripad_review"
+        print("[Success] Get Activity of activityId: " + str(response.meta['activityId']))
+        self.logger.info("[Success] Get Activity of activityId: " + str(response.meta['activityId']))
+
+    def parseReview(self, response):
+        item = AttractionReviewItem()
+        item['topic'] = "tripad_attr_review"
         item['data'] = response.body
         yield item
+
+        print("[Success] Get Review of activityId: " + str(response.meta['activityId']))
+        self.logger.info("[Success] Get Review of activityId: " + str(response.meta['activityId']))
+
         # yield SplashRequest(url=response.url, dont_filter=True, callback=self.parse, endpoint='execute', args={'lua_source': script, 'wait': 0.5, 'body': json.dumps(query)})
 
 

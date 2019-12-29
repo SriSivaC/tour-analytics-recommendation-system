@@ -8,7 +8,7 @@ import re
 
 class HotelSpider(scrapy.Spider):
     # scrapy crawl tripadvisor_hotel_detail
-    # dependency files - json/tripadvisor-graphql-query.json, json/tripadvisor_hotel_url.json
+    # dependency files - json/tripadvisor-graphql-query.json, json/tripadvisor_hotel_href.json
     name = "tripadvisor_hotel_detail"
 
     # start_urls = ['']
@@ -37,17 +37,13 @@ class HotelSpider(scrapy.Spider):
     unwantedKey = ["timezone", "awards", "doubleclick_zone", "preferred_map_engine", "subcategory_type", "subcategory_type_label",
                    "bearing", "business_listings", "special_offers", "write_review", "subcategory", "is_jfy_enabled", "nearest_metro_station", "is_candidate_for_contact_info_suppression"]
 
-    reviewListQuery = []
-    hotelListQuery = []
+    with open("json/tripadvisor-graphql-query.json", 'r') as f:
+        query = json.load(f)
+    reviewListQuery = query[1]
+    hotelListQuery = query[2]
 
     def start_requests(self):
-
-        with open("json/tripadvisor-graphql-query.json", 'r') as f:
-            query = json.load(f)
-        self.reviewListQuery = query[1]
-        self.hotelListQuery = query[2]
-
-        with open('json/tripadvisor_hotel_url.json', 'r') as f:
+        with open('json/tripadvisor_hotel_href.json', 'r') as f:
             hrefs = json.load(f)
         hrefs = [href["href"] for href in hrefs]
 
@@ -55,10 +51,10 @@ class HotelSpider(scrapy.Spider):
         # locationIdList = list(dict.fromkeys(locationIdList))    # Remove duplicate locatioId
 
         for locationId in locationIdList:
-            print("Requesting HotelInfo of locationId: " + locationId)
-            self.logger.info("Requesting HotelInfo of locationId: " + locationId)
+            print("Requesting HotelInfo of locationId: " + str(locationId))
+            self.logger.info("Requesting HotelInfo of locationId: " + str(locationId))
 
-            url = self.base_url + self.api_location_url + locationId
+            url = self.base_url + self.api_location_url + str(locationId)
             yield scrapy.Request(url=url, meta={'locationId': locationId}, dont_filter=True, callback=self.parseHotelInfo)
 
         # for locationId in locationIdList:
@@ -69,7 +65,7 @@ class HotelSpider(scrapy.Spider):
             self.logger.info("Requesting HotelReview of locationId: " + self.reviewListQuery[0]["variables"]["locationId"])
 
             url = self.base_url + self.api_query_url
-            yield scrapy.Request(url=url, method="POST", dont_filter=True, body=json.dumps(self.reviewListQuery), headers=self.headers, callback=self.parseHotelReview)
+            yield scrapy.Request(url=url, method="POST", meta={'locationId': self.reviewListQuery[0]["variables"]["locationId"]}, dont_filter=True, body=json.dumps(self.reviewListQuery), headers=self.headers, callback=self.parseHotelReview)
 
     def parseHotelInfo(self, response):
         data = json.loads(response.body.decode("utf-8"))
@@ -94,9 +90,9 @@ class HotelSpider(scrapy.Spider):
         yield item
 
     def parseHotelReview(self, response):
-        data = json.loads(response.body.decode("utf-8"))
         attemp = 0
-        locationId = data[0]["data"]["locations"][0]["locationId"]
+        data = json.loads(response.body.decode("utf-8"))
+        locationId = data[0].get("data").get("locations")[0].get("locationId")
 
         if data[0]["data"]["locations"][0]["reviewListPage"] is not None:
             data[0].pop("errors", None)
@@ -109,14 +105,18 @@ class HotelSpider(scrapy.Spider):
             item['data'] = json.dumps(data).encode("utf-8")
             yield item
         else:
-            print("Retry retrieving review list of locationId: " + str(locationId))
-            self.logger.info("Retry retrieving review list of locationId: " + str(locationId))
+            print("Retry retrieving review list of locationId: " + str(response.meta['locationId']))
+            self.logger.info("Retry retrieving review list of locationId: " + str(response.meta['locationId']))
+
+            self.reviewListQuery[0]["variables"]["locationId"] = response.meta['locationId']
+            self.reviewListQuery[0]["variables"]["limit"] = -1
+
             attemp += 1
             if attemp < 3:
                 yield scrapy.Request(url=self.base_url + self.api_query_url, method="POST", dont_filter=True, body=json.dumps(self.reviewListQuery), headers=self.headers, callback=self.parseHotelReview)
             else:
-                print("Error retrieving review list of locationId: " + str(locationId))
-                self.logger.info("Error retrieving review list of locationId: " + str(locationId))
+                print("Error retrieving review list of locationId: " + str(response.meta['locationId']))
+                self.logger.info("Error retrieving review list of locationId: " + str(response.meta['locationId']))
 
 # https://www.tripadvisor.com.my/data/1.0/location/293951
 # https://www.tripadvisor.com.my/data/1.0/hotelDetail/614528/heatMap

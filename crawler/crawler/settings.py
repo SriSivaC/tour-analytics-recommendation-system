@@ -16,7 +16,7 @@ NEWSPIDER_MODULE = 'crawler.spiders'
 
 # Kafka configuration
 KAFKA_HOSTS = ["localhost:9092"]
-KAFKA_TOPICS = ["theculturetrip", "tripad_location", "tripad_activity", "tripad_review"]
+KAFKA_TOPICS = ["theculturetrip", "tripad_attr_location", "tripad_attr_activity", "tripad_attr_review", "tripad_hotel_info", "tripad_hotel_review"]
 
 # SPLASH_URL = 'http://localhost:8050/'
 

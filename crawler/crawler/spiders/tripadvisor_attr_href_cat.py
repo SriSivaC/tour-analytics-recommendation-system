@@ -2,6 +2,7 @@ import scrapy
 from crawler.items import AttractionHrefCatItem
 import json
 from collections import defaultdict
+import string
 from backend.fingerprint import hostname_local_fingerprint
 # from requests.models import PreparedRequest
 
@@ -19,10 +20,7 @@ class AttractionSpider(scrapy.Spider):
         'JOBDIR': 'crawls/tripadvisor_attr_href_cat',
         'LOG_FILE': 'tripadvisor_attr_href_cat.log',
         'LOG_LEVEL': 'INFO',
-        'DOWNLOAD_DELAY': 1,
-        'ITEM_PIPELINES': {
-            'crawler.pipelines.DuplicatesUrlPipeline': 300,
-        },
+        'DOWNLOAD_DELAY': 3,
     }
 
     # headers = {
@@ -38,40 +36,55 @@ class AttractionSpider(scrapy.Spider):
 
     def parseCategory(self, response):
         categoryXpath = response.xpath('//div[contains(@class, "filter_list_0")]')[0]
-        categoryTitleList = categoryXpath.xpath('./div/label/a/text()')
-        categoryLinkList = categoryXpath.xpath('./div/label/a/@href')
+        categoryTitleList = categoryXpath.xpath('./div/label/a/text()').extract()
+        categoryLinkList = categoryXpath.xpath('./div/label/a/@href').extract()
 
         if categoryXpath.xpath('./div[contains(@class, "collapse hidden")]'):
-            categoryTitleList += categoryXpath.xpath('./div[contains(@class, "collapse hidden")]/div/label/a/text()')
-            categoryLinkList += categoryXpath.xpath('./div[contains(@class, "collapse hidden")]/div/label/a/@href')
+            categoryTitleList += categoryXpath.xpath('./div[contains(@class, "collapse hidden")]/div/label/a/text()').extract()
+            categoryLinkList += categoryXpath.xpath('./div[contains(@class, "collapse hidden")]/div/label/a/@href').extract()
 
-        # categoryLinkList = [self.base_url + i for i in categoryLinkList.extract()]
-        categoryTitleList = ['_'.join(i.split(' ')[:-1]).lower() for i in categoryTitleList.extract()]
+        # categoryLinkList = [self.base_url + i for i in categoryLinkList]
+        categoryTitleList = [i.translate(str.maketrans('', '', string.punctuation)) for i in categoryTitleList]
+        categoryTitleList = [" ".join(i.split())  for i in categoryTitleList]
+        categoryTitleList = ['_'.join(i.split(' ')[:-1]).lower() for i in categoryTitleList]
 
         for i in range(len(categoryLinkList)):
-            url = response.urljoin(categoryLinkList[i].extract())
-            yield scrapy.Request(url=url, meta={'category': categoryTitleList[i]}, dont_filter=True, callback=self.parseAttraction)
+            print("[Loading] Requesting categoryLinkList of category title: " + categoryTitleList[i])
+            self.logger.info("[Loading] Requesting categoryLinkList of category title: " + categoryTitleList[i])
 
-    def parseAttraction(self, response):
-        for href in response.xpath('//div[contains(@class,"listing_title")]/a/@href'):
-            # url = response.urljoin(href.extract())
+            url = response.urljoin(categoryLinkList[i])
+            yield scrapy.Request(url=url, meta={'category': categoryTitleList[i]}, dont_filter=True, callback=self.parseAttractionItem)
+
+    def parseAttractionItem(self, response):
+        attractionHrefList = response.xpath('//div[contains(@class,"listing_title")]/a/@href').extract()
+
+        for href in attractionHrefList:
+            # url = response.urljoin(href)
             item = AttractionHrefCatItem()
-            item['fingerprint'] = hostname_local_fingerprint(href.extract()).decode('UTF-8')
-            item['href'] = href.extract()
+            item['href'] = href
             item['category'] = response.meta['category']
             yield item
+
+            print("[Success] Get attractionHrefList of href: " + href)
+            self.logger.info("[Success] Get attractionHrefList of href: " + href)
 
             # yield {
             #     'href': href,
             #     'category': response.meta['category'],
             # }
 
-        next_page = response.xpath('//div[contains(@class,"unified pagination")]')
-        if next_page != []:
-            if next_page.xpath("./span/@class").extract_first() != "nav next disabled":
-                url = response.urljoin(next_page.xpath('./a[contains(@class,"nav next")]/@href').extract_first())
-                # next_page.xpath("./a/@data-page-number").extract_first()
-                yield scrapy.Request(url=url, meta={'category': response.meta['category']}, dont_filter=True, callback=self.parseAttraction)
+        nextPageXpath = response.xpath('//div[contains(@class,"unified pagination")]')
+        if nextPageXpath != []:
+            isNextpageDisabled = nextPageXpath.xpath("./span/@class").extract_first()
+            if isNextpageDisabled != "nav next disabled":
+                nextPageHref = nextPageXpath.xpath('./a[contains(@class,"nav next")]/@href').extract_first()
+                # nextPageXpath.xpath("./a/@data-page-number").extract_first()
+
+                print("[Loading] Requesting nextPageHref of href: " + nextPageHref)
+                self.logger.info("[Loading] Requesting nextPageHref of href: " + nextPageHref)
+
+                url = response.urljoin(nextPageHref)
+                yield scrapy.Request(url=url, meta={'category': response.meta['category']}, dont_filter=True, callback=self.parseAttractionItem)
 
     # post processing of duplicate values
     # mergeJsonData('json/tripadvisor_attr_href_cat.json', 'json/tripadvisor_attr_href_cat.json', 'attraction_url', 'category')
