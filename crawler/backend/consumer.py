@@ -8,7 +8,7 @@ import happybase
 from datetime import datetime
 from calendar import timegm
 
-KAFKA_TOPICS = ["theculturetrip", "tripad_location", "tripad_activity", "tripad_review"]
+# KAFKA_TOPICS = ["theculturetrip", "tripad_attr_location", "tripad_attr_activity", "tripad_attr_review", "tripad_hotel_info", "tripad_hotel_review"]
 
 families = {
     'm': dict(max_versions=1),  # metadata
@@ -46,8 +46,10 @@ def utcnow_timestamp():
 def kafka_to_hbase(kafka_topic, key, column):
     hbase = HBaseBackend(happybase.Connection('localhost', protocol='compact', transport='framed'))
 
-    consumer = KafkaConsumer(kafka_topic, bootstrap_servers=['localhost:9092'], consumer_timeout_ms=5000, auto_offset_reset='earliest', enable_auto_commit=False, value_deserializer=lambda m: json.loads(m.decode('utf-8')))
+    consumer = KafkaConsumer(kafka_topic, bootstrap_servers=['localhost:9092'], consumer_timeout_ms=5000,
+                             auto_offset_reset='earliest', enable_auto_commit=False, value_deserializer=lambda m: json.loads(m.decode('utf-8')))
 
+    print("processing...")
     for message in consumer:
         url_id = json.loads(json.dumps(message.value))
 
@@ -66,22 +68,55 @@ def kafka_to_hbase(kafka_topic, key, column):
     print("done.")
 
 
+def kafka_to_json(kafka_topic):
+    consumer = KafkaConsumer(kafka_topic, bootstrap_servers=['localhost:9092'], max_partition_fetch_bytes=20971520, consumer_timeout_ms=5000,
+                             auto_offset_reset='earliest', enable_auto_commit=False, value_deserializer=lambda m: json.loads(m.decode('utf-8')))
+
+    print("processing...")
+    with open('../datasets/theculturetrip_dataset/' + kafka_topic + '.json', 'w') as f:
+        f.write('[')
+
+        for message in consumer:
+            print(message.value)
+            print(type(message.value))
+
+            f.write(message.value)
+            f.write(',')
+        f.write('{"__COMMENT":"THIS IS PLACED HERE JUST TO IGNORE TRAILING COMMA AT THE END OF LAST OBJECT AND THIS OBJECT MUST IGNORE WHILE PARSING"}')
+        f.write(']')
+
+    print("done.")
+
+
+def kafka_consumer(kafka_topic):
+    consumer = KafkaConsumer(kafka_topic, bootstrap_servers=['localhost:9092'], max_partition_fetch_bytes=20971520, consumer_timeout_ms=5000,
+                             auto_offset_reset='earliest', enable_auto_commit=False, value_deserializer=lambda m: json.loads(m.decode('utf-8')))
+
+    print("processing...")
+    for message in consumer:
+        print(message.value)
+        print(type(message.value))
+
+    consumer.close()
+    print("done.")
+
+
+kafka_to_json("theculturetrip")
+
 # theculturetrip url
-# kafka_to_hbase(KAFKA_TOPICS[0], [
-#                "props, pageProps, articleStoreState, articleData, data, link"], ["m:url"])
-# tripadvisor location url
+# kafka_to_hbase(KAFKA_TOPICS[0], ["props, pageProps, articleStoreState, articleData, data, link"], ["m:url"])
+
+# tripadvisor location
 # kafka_to_hbase(KAFKA_TOPICS[1], ["web_url"], ["m:url"])
-# tripadvisor activity id
-# kafka_to_hbase(KAFKA_TOPICS[2], [
-#                "productHeader", "activityId"], ["m:activityId"])
-# tripadvisor review's activity id
-kafka_to_hbase(KAFKA_TOPICS[3], [0, "data", "locations", 0, "locationId"], ["m:locationId"])
+
+# tripadvisor activity
+# kafka_to_hbase(KAFKA_TOPICS[2], ["productHeader", "activityId"], ["m:activityId"])
+
+# tripadvisor activity review
+# kafka_to_hbase(KAFKA_TOPICS[3], [0, "data", "locations", 0, "locationId"], ["m:locationId"])
 
 # message value and key are raw bytes -- decode if necessary!
 # e.g., for unicode: `message.value.decode('utf-8')`
 # print("%s:%d:%d: key=%s value=%s" % (message.topic, message.partition,
 #                                      message.offset, message.key,
 #                                      message.value))
-
-# with open('data.txt', 'w') as outfile:
-#     json.dump(review, outfile)

@@ -5,8 +5,10 @@ crawler/json/*
 test.*
 *.log
 crawler/crawls/*
+crawler/datasets/theculturetrip_dataset/*
 
 # exception to the rule
 !crawler/json/tripadvisor-graphql-query.json
 !crawler/json/tripadvisor_attr_href_cat.json
 !crawler/json/tripadvisor_hotel_href.json
+!crawler/datasets/theculturetrip_dataset/.gitkeep
