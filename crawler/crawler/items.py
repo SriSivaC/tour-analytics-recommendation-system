@@ -16,11 +16,11 @@ class TheculturetripItem(scrapy.Item):
     pass
 
 
-class AttractionItem(scrapy.Item):
+class AttractionHrefCatItem(scrapy.Item):
     # define the fields for your item here like:
     # name = scrapy.Field()
     fingerprint = scrapy.Field()
-    attraction_path = scrapy.Field()
+    href = scrapy.Field()
     category = scrapy.Field()
     pass
 
@@ -32,7 +32,7 @@ class AttrDetailItem(scrapy.Item):
     data = scrapy.Field()
     pass
 
-class HotelUrlItem(scrapy.Item):
+class HotelHrefItem(scrapy.Item):
     # define the fields for your item here like:
     # name = scrapy.Field()
     fingerprint = scrapy.Field()

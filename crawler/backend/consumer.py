@@ -8,8 +8,7 @@ import happybase
 from datetime import datetime
 from calendar import timegm
 
-KAFKA_TOPICS = ["theculturetrip", "tripad_location",
-                "tripad_activity", "tripad_review"]
+KAFKA_TOPICS = ["theculturetrip", "tripad_location", "tripad_activity", "tripad_review"]
 
 families = {
     'm': dict(max_versions=1),  # metadata
@@ -45,11 +44,9 @@ def utcnow_timestamp():
 
 
 def kafka_to_hbase(kafka_topic, key, column):
-    hbase = HBaseBackend(happybase.Connection(
-        'localhost', protocol='compact', transport='framed'))
+    hbase = HBaseBackend(happybase.Connection('localhost', protocol='compact', transport='framed'))
 
-    consumer = KafkaConsumer(kafka_topic,
-                             bootstrap_servers=['localhost:9092'], consumer_timeout_ms=5000, auto_offset_reset='earliest', enable_auto_commit=False, value_deserializer=lambda m: json.loads(m.decode('utf-8')))
+    consumer = KafkaConsumer(kafka_topic, bootstrap_servers=['localhost:9092'], consumer_timeout_ms=5000, auto_offset_reset='earliest', enable_auto_commit=False, value_deserializer=lambda m: json.loads(m.decode('utf-8')))
 
     for message in consumer:
         url_id = json.loads(json.dumps(message.value))
@@ -62,10 +59,8 @@ def kafka_to_hbase(kafka_topic, key, column):
 
         table = hbase.get_table(kafka_topic)
 
-        hbase.insert_data(
-            table, str(url_id), {bytes(column[0], encoding='utf-8'): str(url_id)})
-        hbase.insert_data(
-            table, str(url_id), {b'm:created_at': str(utcnow_timestamp())})
+        hbase.insert_data(table, str(url_id), {bytes(column[0], encoding='utf-8'): str(url_id)})
+        hbase.insert_data(table, str(url_id), {b'm:created_at': str(utcnow_timestamp())})
         hbase.insert_data(table, str(url_id), {b'c:content': json.dumps(message.value)})
 
     print("done.")
@@ -80,8 +75,7 @@ def kafka_to_hbase(kafka_topic, key, column):
 # kafka_to_hbase(KAFKA_TOPICS[2], [
 #                "productHeader", "activityId"], ["m:activityId"])
 # tripadvisor review's activity id
-kafka_to_hbase(KAFKA_TOPICS[3], [0, "data",
-                                 "locations", 0, "locationId"], ["m:locationId"])
+kafka_to_hbase(KAFKA_TOPICS[3], [0, "data", "locations", 0, "locationId"], ["m:locationId"])
 
 # message value and key are raw bytes -- decode if necessary!
 # e.g., for unicode: `message.value.decode('utf-8')`

@@ -23,22 +23,27 @@ end
 
 
 class AttractionDetailSpider(scrapy.Spider):
-    name = "attr_detail"
-
-    custom_settings = {
-        'DOWNLOAD_DELAY': 3,
-        'ITEM_PIPELINES': {
-            'crawler.pipelines.KafkaPipeline': 300,
-        },
-    }
+    # scrapy crawl tripadvisor_attr_detail
+    # dependency files - json/tripadvisor-graphql-query.json, json/tripadvisor_attr_url_cat.json
+    name = "tripadvisor_attr_detail"
 
     # start_urls = ['']
     base_url = "https://www.tripadvisor.com.my"
     api_location_url = "/data/1.0/location/"  # required location_id
     api_prod_activity_url = "/data/1.0/attractions/products/activity/"  # required activityId
-    # required request payload and variables
-    api_query_url = "/data/graphql/batched/"
+    api_query_url = "/data/graphql/batched/"  # required request payload and variables
+
     allowed_domains = ["tripadvisor.com"]
+
+    custom_settings = {
+        'JOBDIR': 'crawls/tripadvisor_attr_detail',
+        'LOG_FILE': 'tripadvisor_attr_detail.log',
+        'LOG_LEVEL': 'INFO',
+        'DOWNLOAD_DELAY': 3,
+        'ITEM_PIPELINES': {
+            'crawler.pipelines.KafkaPipeline': 300,
+        },
+    }
 
     headers = {
         "Content-Type": "application/json",
@@ -46,22 +51,24 @@ class AttractionDetailSpider(scrapy.Spider):
         "x-requested-by": "TNI1625!AObtWs7+WBUcGGl3nYadc7+VtOuZWqN0FP2DocM82UA8efGHjAnpvxF3SxGefK1Vxqwijl6NoBm9GdDf3PBCcO61s40COv6y/wLrJvI6SiXh+VmFIAqKGlpcvLyfxApCQddrXOcRyEepTAJDkaVFKy6y5ZPR9RSBrZs4BRiKq0UM",
     }
 
+    unwantedKey = ["highlights", "obfuscatedViatorCommerceLink"]
+
+    reviewListQuery = []
+
     def start_requests(self):
         with open('json/tripadvisor-api-query.json', 'r') as f:
             query = [json.load(f)[0]]
 
-        with open('json/attraction_category.json', 'r') as f:
-            urls = json.load(f)
+        with open('json/tripadvisor_attr_url_cat.json', 'r') as f:
+            hrefs = json.load(f)
 
-        location_id = re.findall(r'g(\d+)', json.dumps(urls))
+        location_id = re.findall(r'g(\d+)', json.dumps(hrefs))
         location_id = list(dict.fromkeys(location_id))
-        location_id_list = [self.base_url +
-                            self.api_location_url + i for i in location_id]
+        location_id_list = [self.base_url + self.api_location_url + i for i in location_id]
 
-        activityId = re.findall(r'd(\d+)', json.dumps(urls))
+        activityId = re.findall(r'd(\d+)', json.dumps(hrefs))
         activityId = list(dict.fromkeys(activityId))
-        activityId_list = [self.base_url +
-                           self.api_prod_activity_url + i for i in activityId]
+        activityId_list = [self.base_url + self.api_prod_activity_url + i for i in activityId]
 
         for url in location_id_list:
             yield scrapy.Request(url=url, dont_filter=True, callback=self.parse_location)
@@ -79,9 +86,13 @@ class AttractionDetailSpider(scrapy.Spider):
         yield item
 
     def parse_activity(self, response):
+        data = json.loads(response.body.decode("utf-8"))
+        for key in self.unwantedKey:
+            data.pop(key, None)
+
         item = AttrDetailItem()
         item['topic'] = "tripad_activity"
-        item['data'] = response.body
+        item['data'] = json.dumps(data).encode("utf-8")
         yield item
 
     def parse_review(self, response):

@@ -7,20 +7,22 @@ import re
 
 
 class HotelSpider(scrapy.Spider):
-    name = "tripadvisor_hotel_detail"   # scrapy crawl tripadvisor_hotel_detail
+    # scrapy crawl tripadvisor_hotel_detail
+    # dependency files - json/tripadvisor-graphql-query.json, json/tripadvisor_hotel_url.json
+    name = "tripadvisor_hotel_detail"
 
     # start_urls = ['']
     base_url = "https://www.tripadvisor.com.my"
     api_location_url = "/data/1.0/location/"  # required location_id
-    api_query_url = "/data/graphql/batched/"
+    api_query_url = "/data/graphql/batched/"  # required request payload and variables
 
     allowed_domains = ["tripadvisor.com"]
 
     custom_settings = {
         'JOBDIR': 'crawls/tripadvisor_hotel_detail',
-        'DOWNLOAD_DELAY': 1.5,
         'LOG_FILE': 'tripadvisor_hotel_detail.log',
         'LOG_LEVEL': 'INFO',
+        'DOWNLOAD_DELAY': 1.5,
         'ITEM_PIPELINES': {
             'crawler.pipelines.KafkaPipeline': 300,
         },
@@ -53,21 +55,18 @@ class HotelSpider(scrapy.Spider):
         # locationIdList = list(dict.fromkeys(locationIdList))    # Remove duplicate locatioId
 
         for locationId in locationIdList:
-            self.hotelListQuery[0]["variables"]["locationId"] = locationId
             print("Requesting HotelInfo of locationId: " + locationId)
-            self.logger.info(
-                "Requesting HotelInfo of locationId: " + locationId)
+            self.logger.info("Requesting HotelInfo of locationId: " + locationId)
+
             url = self.base_url + self.api_location_url + locationId
-            yield scrapy.Request(url=url, dont_filter=True, callback=self.parseHotelInfo)
+            yield scrapy.Request(url=url, meta={'locationId': locationId}, dont_filter=True, callback=self.parseHotelInfo)
 
         # for locationId in locationIdList:
             self.reviewListQuery[0]["variables"]["locationId"] = locationId
             self.reviewListQuery[0]["variables"]["limit"] = -1
 
-            print("Requesting HotelReview of locationId: " +
-                  self.reviewListQuery[0]["variables"]["locationId"])
-            self.logger.info("Requesting HotelReview of locationId: " +
-                             self.reviewListQuery[0]["variables"]["locationId"])
+            print("Requesting HotelReview of locationId: " + self.reviewListQuery[0]["variables"]["locationId"])
+            self.logger.info("Requesting HotelReview of locationId: " + self.reviewListQuery[0]["variables"]["locationId"])
 
             url = self.base_url + self.api_query_url
             yield scrapy.Request(url=url, method="POST", dont_filter=True, body=json.dumps(self.reviewListQuery), headers=self.headers, callback=self.parseHotelReview)
@@ -76,18 +75,18 @@ class HotelSpider(scrapy.Spider):
         data = json.loads(response.body.decode("utf-8"))
         for key in self.unwantedKey:
             data.pop(key, None)
+
+        self.hotelListQuery[0]["variables"]["locationId"] = response.meta['locationId']
+
         url = self.base_url + self.api_query_url
         yield scrapy.Request(url=url, meta={'hotelInfo': data}, method="POST", dont_filter=True, body=json.dumps(self.hotelListQuery), headers=self.headers, callback=self.parseHotelDetail)
 
     def parseHotelDetail(self, response):
         hotelInfo = response.meta["hotelInfo"]
-        hotelInfo["detail"] = json.loads(response.body.decode(
-            "utf-8"))[0]["data"]["locations"][0]["detail"]
+        hotelInfo["detail"] = json.loads(response.body.decode("utf-8"))[0]["data"]["locations"][0]["detail"]
 
-        print("Get HotelInfo Success of locationId: " +
-              hotelInfo["location_id"])
-        self.logger.info(
-            "Get HotelInfo Success of locationId: " + hotelInfo["location_id"])
+        print("Get HotelInfo Success of locationId: " + hotelInfo["location_id"])
+        self.logger.info("Get HotelInfo Success of locationId: " + hotelInfo["location_id"])
 
         item = HotelInfoItem()
         item['topic'] = "tripad_hotel_info"
@@ -97,28 +96,27 @@ class HotelSpider(scrapy.Spider):
     def parseHotelReview(self, response):
         data = json.loads(response.body.decode("utf-8"))
         attemp = 0
+        locationId = data[0]["data"]["locations"][0]["locationId"]
+
         if data[0]["data"]["locations"][0]["reviewListPage"] is not None:
             data[0].pop("errors", None)
-            locationId = data[0]["data"]["locations"][0]["locationId"]
 
             print("Get HotelReview Success of locationId: " + str(locationId))
-            self.logger.info(
-                "Get HotelReview Success of locationId: " + str(locationId))
+            self.logger.info("Get HotelReview Success of locationId: " + str(locationId))
 
             item = HotelReviewItem()
             item['topic'] = "tripad_hotel_review"
             item['data'] = json.dumps(data).encode("utf-8")
             yield item
-
         else:
-            self.logger.info("Retry retrieving review list of locationId: %s",
-                             self.reviewListQuery[0]["variables"]["locationId"])
+            print("Retry retrieving review list of locationId: " + str(locationId))
+            self.logger.info("Retry retrieving review list of locationId: " + str(locationId))
             attemp += 1
             if attemp < 3:
                 yield scrapy.Request(url=self.base_url + self.api_query_url, method="POST", dont_filter=True, body=json.dumps(self.reviewListQuery), headers=self.headers, callback=self.parseHotelReview)
             else:
-                self.logger.info("Error retrieving review list of locationId: %s",
-                                 self.reviewListQuery[0]["variables"]["locationId"])
+                print("Error retrieving review list of locationId: " + str(locationId))
+                self.logger.info("Error retrieving review list of locationId: " + str(locationId))
 
 # https://www.tripadvisor.com.my/data/1.0/location/293951
 # https://www.tripadvisor.com.my/data/1.0/hotelDetail/614528/heatMap

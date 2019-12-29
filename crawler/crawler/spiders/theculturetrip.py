@@ -42,25 +42,21 @@ class CultureTripSpider(scrapy.Spider):
             yield scrapy.Request(url=url, callback=self.parse)
 
     def parse(self, response):
-        jres = re.findall(
-            "\{\".*\:\{.*\:.*\}", response.body.decode("utf-8"))
+        jres = re.findall('\{\".*\:\{.*\:.*\}', response.body.decode("utf-8"))
         jres = json.loads(jres[0])
 
         for url in jres['props']['pageProps']['locationStoreState']['spotlightPicks']:
             self.base_url = jres['props']['pageProps']['env']['WP_BASE']
             next_url = self.base_url + url['url']
-            self.scrolled_article.append(
-                jres['props']['pageProps']['locationStoreState']['spotlightPicks'][self.counter]['id'])
+            self.scrolled_article.append(jres['props']['pageProps']['locationStoreState']['spotlightPicks'][self.counter]['id'])
             self.counter = self.counter + 1
             yield scrapy.Request(url=next_url, callback=self.parse_details)
 
         self.total = jres['props']['pageProps']['locationStoreState']['locationData']['locationResources'][0]['articleCounter']
-        self.headers.update({'scrolled_article': (
-            str(self.scrolled_article)[1:-1]).replace(" ", "")})
+        self.headers.update({'scrolled_article': (str(self.scrolled_article)[1:-1]).replace(" ", "")})
         self.params['kgID'] = jres['props']['pageProps']['locationStoreState']['locationData']['locationResources'][0]['kgID']
 
-        self.api_url = jres['props']['pageProps']['env']['APP_API_CLIENT'] + \
-            '/v2/articles'
+        self.api_url = jres['props']['pageProps']['env']['APP_API_CLIENT'] + '/v2/articles'
         preq = PreparedRequest()
         preq.prepare_url(self.api_url, self.params)
         # self.params['offset'] = self.params['offset'] + 15
@@ -90,8 +86,7 @@ class CultureTripSpider(scrapy.Spider):
             yield scrapy.Request(url=url['links'], callback=self.parse_details)
 
     def parse_details(self, response):
-        jres = re.findall(
-            "\{\".*\:\{.*\:.*\}", response.body.decode("utf-8"))
+        jres = re.findall('\{\".*\:\{.*\:.*\}', response.body.decode("utf-8"))
         jres = json.dumps(jres[0])
         # print('')
         # print(jres)
