@@ -87,7 +87,7 @@ class AttractionSpider(scrapy.Spider):
                 yield scrapy.Request(url=url, meta={'category': response.meta['category']}, dont_filter=True, callback=self.parseAttractionItem)
 
     # post processing of duplicate values
-    # mergeJsonData('json/tripadvisor_attr_href_cat_ori.json', 'json/tripadvisor_attr_href_cat.json', 'attraction_url', 'category')
+    # mergeJsonData('json/tripadvisor_attr_href_cat_ori.json', 'json/tripadvisor_attr_href_cat.json', 'href', 'category')
     def mergeJsonData(self, srcFpath, dsnFpath, uniKey, dupKey):
         with open(srcFpath, 'r') as f:
             data = json.load(f)
