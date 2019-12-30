@@ -55,10 +55,11 @@ class AttractionDetailSpider(scrapy.Spider):
                            "nearest_metro_station", "has_restaurant_coverpage", "has_attraction_coverpage", "has_curated_shopping_list", ""]
     unwantedActivityKey = ["highlights", "obfuscatedViatorCommerceLink"]
 
-    def start_requests(self):
-        with open('json/tripadvisor-graphql-query.json', 'r') as f:
-            reviewListQuery = json.load(f)[1]
+    with open('json/tripadvisor-graphql-query.json', 'r') as f:
+        query = json.load(f)
+    reviewListQuery = query[1]
 
+    def start_requests(self):
         with open('json/tripadvisor_attr_href_cat.json', 'r') as f:
             attractionHrefList = json.load(f)
 
@@ -87,8 +88,9 @@ class AttractionDetailSpider(scrapy.Spider):
             print("[Loading] Requesting Review of activityId: " + str(activityId))
             self.logger.info("[Loading] Requesting Review of activityId: " + str(activityId))
 
-            reviewListQuery[0]['variables']['locationId'] = activityId  # activityId
-            yield scrapy.Request(url=self.base_url + self.api_query_url, meta={'activityId': activityId}, method="POST", dont_filter=True, body=json.dumps(reviewListQuery), headers=self.headers, callback=self.parseReview)
+            self.reviewListQuery[0]['variables']['locationId'] = activityId  # activityId
+            self.reviewListQuery[0]["variables"]["limit"] = -1
+            yield scrapy.Request(url=self.base_url + self.api_query_url, meta={'activityId': activityId}, method="POST", dont_filter=True, body=json.dumps(self.reviewListQuery), headers=self.headers, callback=self.parseReview)
 
     def parseLocation(self, response):
         data = json.loads(response.body.decode("utf-8"))
@@ -99,7 +101,7 @@ class AttractionDetailSpider(scrapy.Spider):
         item['topic'] = "tripad_attr_location"
         item['data'] = json.dumps(data).encode("utf-8")
         yield item
-        
+
         print("[Success] Get Location of locationId: " + str(response.meta['locationId']))
         self.logger.info("[Success] Get Location of locationId: " + str(response.meta['locationId']))
 
@@ -117,13 +119,33 @@ class AttractionDetailSpider(scrapy.Spider):
         self.logger.info("[Success] Get Activity of activityId: " + str(response.meta['activityId']))
 
     def parseReview(self, response):
-        item = AttractionReviewItem()
-        item['topic'] = "tripad_attr_review"
-        item['data'] = response.body
-        yield item
+        attemp = 0
+        data = json.loads(response.body.decode("utf-8"))
+        activityId = data[0].get("data").get("locations")[0].get("locationId")
 
-        print("[Success] Get Review of activityId: " + str(response.meta['activityId']))
-        self.logger.info("[Success] Get Review of activityId: " + str(response.meta['activityId']))
+        if data[0]["data"]["locations"][0]["reviewListPage"] is not None:
+            data[0].pop("errors", None)
+
+            print("[Success] Get Review of activityId: " + str(activityId))
+            self.logger.info("[Success] Get Review of activityId: " + str(activityId))
+
+            item = AttractionReviewItem()
+            item['topic'] = "tripad_attr_review"
+            item['data'] = json.dumps(data).encode("utf-8")
+            yield item
+        else:
+            print("[Error] Retry retrieving review list of activityId: " + str(response.meta['activityId']))
+            self.logger.info("[Error] Retry retrieving review list of activityId: " + str(response.meta['activityId']))
+
+            self.reviewListQuery[0]["variables"]["locationId"] = response.meta['activityId']
+            self.reviewListQuery[0]["variables"]["limit"] = -1
+
+            attemp += 1
+            if attemp < 3:
+                yield scrapy.Request(url=self.base_url + self.api_query_url, method="POST", meta={'activityId': response.meta['activityId']}, dont_filter=True, body=json.dumps(self.reviewListQuery), headers=self.headers, callback=self.parseReview)
+            else:
+                print("[Error] Retrieving review list of activityId: " + str(response.meta['activityId']))
+                self.logger.info("[Error] Retrieving review list of activityId: " + str(response.meta['activityId']))
 
         # yield SplashRequest(url=response.url, dont_filter=True, callback=self.parse, endpoint='execute', args={'lua_source': script, 'wait': 0.5, 'body': json.dumps(query)})
 

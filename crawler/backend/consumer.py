@@ -80,7 +80,7 @@ def kafka_to_json(kafka_topic):
             print(message.value)
             print(type(message.value))
 
-            f.write(message.value)
+            f.write(json.dumps(message.value))
             f.write(',')
         f.write('{"__COMMENT":"THIS IS PLACED HERE JUST TO IGNORE TRAILING COMMA AT THE END OF LAST OBJECT AND THIS OBJECT MUST IGNORE WHILE PARSING"}')
         f.write(']')
