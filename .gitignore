@@ -2,7 +2,7 @@
 __pycache__
 *ipynb_checkpoints
 crawler/json/*
-test.*
+test*.*
 *.log
 crawler/crawls/*
 crawler/datasets/theculturetrip_dataset/*
