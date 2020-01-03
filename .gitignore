@@ -7,6 +7,8 @@ test.*
 crawler/crawls/*
 crawler/datasets/theculturetrip_dataset/*
 crawler/datasets/tripadvisor_dataset/*
+notebook/spark-jars/*
+notebook/testing.ipynb
 
 # exception to the rule
 !crawler/json/tripadvisor-graphql-query.json
