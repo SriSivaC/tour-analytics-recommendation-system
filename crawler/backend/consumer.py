@@ -87,6 +87,25 @@ def kafka_to_json(kafka_topic):
 
     print("done.")
 
+def kafka_to_json_review(kafka_topic):
+    consumer = KafkaConsumer(kafka_topic, bootstrap_servers=['10.123.10.26:9092'], max_partition_fetch_bytes=20971520, consumer_timeout_ms=5000,
+                             auto_offset_reset='earliest', enable_auto_commit=False, value_deserializer=lambda m: json.loads(m.decode('utf-8')))
+
+    print("processing...")
+    with open('../datasets/theculturetrip_dataset/' + kafka_topic + '.json', 'w') as f:
+        f.write('[')
+
+        for message in consumer:
+            reviews = message.value[0]['data']['locations'][0]['reviewListPage']['reviews']
+            for i in reviews:
+                f.write(json.dumps(i))
+                f.write(',')
+
+        f.write('{"__COMMENT":"THIS IS PLACED HERE JUST TO IGNORE TRAILING COMMA AT THE END OF LAST OBJECT AND THIS OBJECT MUST IGNORE WHILE PARSING"}')
+        f.write(']')
+
+    print("done.")
+
 
 def kafka_consumer(kafka_topic):
     consumer = KafkaConsumer(kafka_topic, bootstrap_servers=['localhost:9092'], max_partition_fetch_bytes=20971520, consumer_timeout_ms=5000,
@@ -101,7 +120,8 @@ def kafka_consumer(kafka_topic):
     print("done.")
 
 
-kafka_to_json("theculturetrip")
+# kafka_to_json("theculturetrip")
+kafka_to_json_review("tripad_attr_review")
 
 # theculturetrip url
 # kafka_to_hbase(KAFKA_TOPICS[0], ["props, pageProps, articleStoreState, articleData, data, link"], ["m:url"])
