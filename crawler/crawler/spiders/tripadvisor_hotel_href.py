@@ -7,7 +7,7 @@ from backend.fingerprint import hostname_local_fingerprint
 
 
 class HotelSpider(scrapy.Spider):
-    # scrapy crawl tripadvisor_hotel_href -o json/tripadvisor_hotel_href.json
+    # scrapy crawl tripadvisor_hotel_href -o datasets/tripadvisor_dataset/hotels/tripadvisor_hotel_href.json
     name = "tripadvisor_hotel_href"
 
     # start_urls = ['']

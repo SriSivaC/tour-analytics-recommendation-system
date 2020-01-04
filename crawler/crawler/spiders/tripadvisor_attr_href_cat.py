@@ -8,7 +8,7 @@ from backend.fingerprint import hostname_local_fingerprint
 
 
 class AttractionSpider(scrapy.Spider):
-    # scrapy crawl tripadvisor_attr_href_cat -o json/tripadvisor_attr_href_cat_ori.json
+    # scrapy crawl tripadvisor_attr_href_cat -o datasets/tripadvisor_dataset/attractions/tripadvisor_attr_href_cat.json
     name = "tripadvisor_attr_href_cat"
 
     # start_urls = ['']
@@ -45,7 +45,7 @@ class AttractionSpider(scrapy.Spider):
 
         # categoryLinkList = [self.base_url + i for i in categoryLinkList]
         categoryTitleList = [i.translate(str.maketrans('', '', string.punctuation)) for i in categoryTitleList]
-        categoryTitleList = [" ".join(i.split())  for i in categoryTitleList]
+        categoryTitleList = [" ".join(i.split()) for i in categoryTitleList]
         categoryTitleList = ['_'.join(i.split(' ')[:-1]).lower() for i in categoryTitleList]
 
         for i in range(len(categoryLinkList)):
@@ -87,7 +87,7 @@ class AttractionSpider(scrapy.Spider):
                 yield scrapy.Request(url=url, meta={'category': response.meta['category']}, dont_filter=True, callback=self.parseAttractionItem)
 
     # post processing of duplicate values
-    # mergeJsonData('json/tripadvisor_attr_href_cat_ori.json', 'json/tripadvisor_attr_href_cat.json', 'href', 'category')
+    # mergeJsonData('datasets/tripadvisor_dataset/attractions/tripadvisor_attr_href_cat.json', 'datasets/tripadvisor_dataset/attractions/tripadvisor_attr_href_cat.json', 'href', 'category')
     def mergeJsonData(self, srcFpath, dsnFpath, uniKey, dupKey):
         with open(srcFpath, 'r') as f:
             data = json.load(f)

@@ -24,7 +24,7 @@ end
 
 class AttractionDetailSpider(scrapy.Spider):
     # scrapy crawl tripadvisor_attr_detail
-    # dependency files - json/tripadvisor-graphql-query.json, json/tripadvisor_attr_href_cat.json
+    # dependency files - datasets/tripadvisor_dataset/tripadvisor-graphql-query.json, datasets/tripadvisor_dataset/attractions/tripadvisor_attr_href_cat.json
     name = "tripadvisor_attr_detail"
 
     # start_urls = ['']
@@ -55,12 +55,12 @@ class AttractionDetailSpider(scrapy.Spider):
                            "nearest_metro_station", "has_restaurant_coverpage", "has_attraction_coverpage", "has_curated_shopping_list", ""]
     unwantedActivityKey = ["highlights", "obfuscatedViatorCommerceLink"]
 
-    with open('json/tripadvisor-graphql-query.json', 'r') as f:
+    with open('datasets/tripadvisor_dataset/tripadvisor-graphql-query.json', 'r') as f:
         query = json.load(f)
     reviewListQuery = query[1]
 
     def start_requests(self):
-        with open('json/tripadvisor_attr_href_cat.json', 'r') as f:
+        with open('datasets/tripadvisor_dataset/attractions/tripadvisor_attr_href_cat.json', 'r') as f:
             attractionHrefList = json.load(f)
 
         locationIdList = re.findall(r'g(\d+)', json.dumps(attractionHrefList))

@@ -8,7 +8,7 @@ import re
 
 class HotelSpider(scrapy.Spider):
     # scrapy crawl tripadvisor_hotel_detail
-    # dependency files - json/tripadvisor-graphql-query.json, json/tripadvisor_hotel_href.json
+    # dependency files - datasets/tripadvisor_dataset/tripadvisor-graphql-query.json, datasets/tripadvisor_dataset/hotels/tripadvisor_hotel_href.json
     name = "tripadvisor_hotel_detail"
 
     # start_urls = ['']
@@ -37,13 +37,13 @@ class HotelSpider(scrapy.Spider):
     unwantedKey = ["timezone", "awards", "doubleclick_zone", "preferred_map_engine", "subcategory_type", "subcategory_type_label",
                    "bearing", "business_listings", "special_offers", "write_review", "subcategory", "is_jfy_enabled", "nearest_metro_station", "is_candidate_for_contact_info_suppression"]
 
-    with open("json/tripadvisor-graphql-query.json", 'r') as f:
+    with open("datasets/tripadvisor_dataset/tripadvisor-graphql-query.json", 'r') as f:
         query = json.load(f)
     reviewListQuery = query[1]
     hotelListQuery = query[2]
 
     def start_requests(self):
-        with open('json/tripadvisor_hotel_href.json', 'r') as f:
+        with open('datasets/tripadvisor_dataset/hotels/tripadvisor_hotel_href.json', 'r') as f:
             hrefs = json.load(f)
         hrefs = [href["href"] for href in hrefs]
 
