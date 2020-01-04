@@ -4,17 +4,23 @@ __pycache__
 test*.*
 *.log
 crawler/crawls/*
+
 crawler/datasets/theculturetrip_dataset/*
+crawler/datasets/tripadvisor_dataset/attractions/*
 crawler/datasets/tripadvisor_dataset/attractions/spark-warehouse/etl/*
+crawler/datasets/tripadvisor_dataset/attractions/spark-warehouse/json/*
 crawler/datasets/tripadvisor_dataset/hotels/*
+
 notebook/spark-jars/*
 notebook/attraction/rbm_models/*
 
 # exception to the rule
+!crawler/datasets/theculturetrip_dataset/.gitkeep
+
 !crawler/datasets/tripadvisor_dataset/tripadvisor-graphql-query.json
 !crawler/datasets/tripadvisor_dataset/attractions/tripadvisor_attr_href_cat.json
 !crawler/datasets/tripadvisor_dataset/hotels/tripadvisor_hotel_href.json
-!crawler/datasets/theculturetrip_dataset/.gitkeep
-!crawler/datasets/tripadvisor_dataset/attractions/.gitkeep
-!crawler/datasets/tripadvisor_dataset/hotels/.gitkeep
+
+!crawler/datasets/tripadvisor_dataset/attractions/spark-warehouse
 !crawler/datasets/tripadvisor_dataset/attractions/spark-warehouse/etl/.gitkeep
+!crawler/datasets/tripadvisor_dataset/attractions/spark-warehouse/json/.gitkeep

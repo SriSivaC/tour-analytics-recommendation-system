@@ -10,7 +10,8 @@ nltk.download('wordnet')
 
 # define path
 ROOT_DIR = os.path.abspath('/home/hduser/document/jupyter/FYP/')
-parquet_path = ROOT_DIR + '/crawler/datasets/tripadvisor_dataset/spark/'
+ds_dir = ROOT_DIR + '/crawler/datasets/tripadvisor_dataset/attractions/'
+spark_warehouse_dir = ROOT_DIR + '/crawler/datasets/tripadvisor_dataset/attractions/spark-warehouse/'
 
 
 def f(row):
@@ -44,7 +45,7 @@ def get_recc(spark, cat_rating, hyperparameter):
 
     util = Util()
     # reading
-    attractions, ratings = util.read_data(spark, parquet_path + 'etl/attractions'), util.read_data(spark, parquet_path + 'etl/attraction_reviews')
+    attractions, ratings = util.read_data(spark, spark_warehouse_dir + 'etl/attractions'), util.read_data(spark, spark_warehouse_dir + 'etl/attraction_reviews')
     # processing
     ratings = util.clean_subset(ratings, hyperparameter['rows'])
     rbm_att, train = util.preprocess(ratings)
@@ -98,7 +99,7 @@ def filter_df(spark, filename, user, budget_low, budget_high, destination, att_d
                               (recommendation.price <= budget_high)]
 
     # read spark dataframe from parquet
-    attr_href_cat_spark_df = spark.read.parquet(parquet_path + 'tripadvisor_attr_href_cat')
+    attr_href_cat_spark_df = spark.read.parquet(ds_dir + 'tripadvisor_attr_href_cat')
     attr_href_cat_spark_df = attr_href_cat_spark_df.drop('_corrupt_record')
     attr_href_cat_spark_df = attr_href_cat_spark_df.dropna()
     attr_href_cat_df = attr_href_cat_spark_df.toPandas()
