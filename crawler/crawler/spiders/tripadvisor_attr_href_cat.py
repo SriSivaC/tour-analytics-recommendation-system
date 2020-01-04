@@ -8,6 +8,7 @@ from backend.fingerprint import hostname_local_fingerprint
 
 
 class AttractionSpider(scrapy.Spider):
+    # remove tripadvisor_attr_href_cat.json is its already exists
     # scrapy crawl tripadvisor_attr_href_cat -o datasets/tripadvisor_dataset/attractions/tripadvisor_attr_href_cat.json
     name = "tripadvisor_attr_href_cat"
 

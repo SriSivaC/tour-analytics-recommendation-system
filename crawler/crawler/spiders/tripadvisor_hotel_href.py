@@ -7,6 +7,7 @@ from backend.fingerprint import hostname_local_fingerprint
 
 
 class HotelSpider(scrapy.Spider):
+    # remove tripadvisor_hotel_href.json is its already exists
     # scrapy crawl tripadvisor_hotel_href -o datasets/tripadvisor_dataset/hotels/tripadvisor_hotel_href.json
     name = "tripadvisor_hotel_href"
 

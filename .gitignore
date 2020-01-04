@@ -5,7 +5,7 @@ test*.*
 *.log
 crawler/crawls/*
 crawler/datasets/theculturetrip_dataset/*
-crawler/datasets/tripadvisor_dataset/attractions/*
+crawler/datasets/tripadvisor_dataset/attractions/spark-warehouse/etl/*
 crawler/datasets/tripadvisor_dataset/hotels/*
 notebook/spark-jars/*
 notebook/attraction/rbm_models/*
@@ -17,3 +17,4 @@ notebook/attraction/rbm_models/*
 !crawler/datasets/theculturetrip_dataset/.gitkeep
 !crawler/datasets/tripadvisor_dataset/attractions/.gitkeep
 !crawler/datasets/tripadvisor_dataset/hotels/.gitkeep
+!crawler/datasets/tripadvisor_dataset/attractions/spark-warehouse/etl/.gitkeep
