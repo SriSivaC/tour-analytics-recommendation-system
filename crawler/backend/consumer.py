@@ -8,7 +8,6 @@ import happybase
 from datetime import datetime
 from calendar import timegm
 
-# KAFKA_TOPICS = ["theculturetrip", "tripad_attr_location", "tripad_attr_activity", "tripad_attr_review", "tripad_hotel_info", "tripad_hotel_review"]
 
 families = {
     'm': dict(max_versions=1),  # metadata
@@ -43,10 +42,10 @@ def utcnow_timestamp():
     return timegm(datetime.utcnow().timetuple())
 
 
-def kafka_to_hbase(kafka_topic, key, column):
-    hbase = HBaseBackend(happybase.Connection('localhost', protocol='compact', transport='framed'))
+def kafka_to_hbase(broker, hbase_host, kafka_topic, key, column):
+    hbase = HBaseBackend(happybase.Connection(hbase_host, protocol='compact', transport='framed'))
 
-    consumer = KafkaConsumer(kafka_topic, bootstrap_servers=['localhost:9092'], consumer_timeout_ms=5000,
+    consumer = KafkaConsumer(kafka_topic, bootstrap_servers=broker, consumer_timeout_ms=5000,
                              auto_offset_reset='earliest', enable_auto_commit=False, value_deserializer=lambda m: json.loads(m.decode('utf-8')))
 
     print("processing...")
@@ -67,76 +66,64 @@ def kafka_to_hbase(kafka_topic, key, column):
 
     print("done.")
 
-
-def kafka_to_json(kafka_topic):
-    consumer = KafkaConsumer(kafka_topic, bootstrap_servers=['localhost:9092'], max_partition_fetch_bytes=20971520, consumer_timeout_ms=5000,
-                             auto_offset_reset='earliest', enable_auto_commit=False, value_deserializer=lambda m: json.loads(m.decode('utf-8')))
+def kafka_to_json(broker, kafka_topic, filepath, key):
+    consumer = KafkaConsumer(
+        kafka_topic,
+        bootstrap_servers=broker,
+        max_partition_fetch_bytes=20971520,
+        consumer_timeout_ms=5000,
+        auto_offset_reset='earliest',
+        enable_auto_commit=False,
+        value_deserializer=lambda m: json.loads(m.decode('utf-8')))
 
     print("processing...")
-    with open('../datasets/theculturetrip_dataset/' + kafka_topic + '.json', 'w') as f:
+    with open(filepath, 'w') as f:
         f.write('[')
 
         for message in consumer:
-            print(message.value)
-            print(type(message.value))
-
-            f.write(json.dumps(message.value))
-            f.write(',')
-        f.write('{"__COMMENT":"THIS IS PLACED HERE JUST TO IGNORE TRAILING COMMA AT THE END OF LAST OBJECT AND THIS OBJECT MUST IGNORE WHILE PARSING"}')
-        f.write(']')
-
-    print("done.")
-
-def kafka_to_json_review(kafka_topic):
-    consumer = KafkaConsumer(kafka_topic, bootstrap_servers=['10.123.10.26:9092'], max_partition_fetch_bytes=20971520, consumer_timeout_ms=5000,
-                             auto_offset_reset='earliest', enable_auto_commit=False, value_deserializer=lambda m: json.loads(m.decode('utf-8')))
-
-    print("processing...")
-    with open('../datasets/theculturetrip_dataset/' + kafka_topic + '.json', 'w') as f:
-        f.write('[')
-
-        for message in consumer:
-            reviews = message.value[0]['data']['locations'][0]['reviewListPage']['reviews']
-            for i in reviews:
-                f.write(json.dumps(i))
+            value = message.value
+            
+            for k in key:
+                value = value[k]
+            
+            if type(value) == list:
+                for v in value:
+                    f.write(json.dumps(v))
+                    f.write(',')
+            else:
+                f.write(json.dumps(value))
                 f.write(',')
-
-        f.write('{"__COMMENT":"THIS IS PLACED HERE JUST TO IGNORE TRAILING COMMA AT THE END OF LAST OBJECT AND THIS OBJECT MUST IGNORE WHILE PARSING"}')
+                
+        f.write(
+            '{"__COMMENT":"THIS IS PLACED HERE JUST TO IGNORE TRAILING COMMA AT THE END OF LAST OBJECT AND THIS OBJECT MUST IGNORE WHILE PARSING"}'
+        )
         f.write(']')
 
     print("done.")
 
 
-def kafka_consumer(kafka_topic):
-    consumer = KafkaConsumer(kafka_topic, bootstrap_servers=['localhost:9092'], max_partition_fetch_bytes=20971520, consumer_timeout_ms=5000,
-                             auto_offset_reset='earliest', enable_auto_commit=False, value_deserializer=lambda m: json.loads(m.decode('utf-8')))
+def kafka_consumer(broker, kafka_topic, filepath, key):
+    consumer = KafkaConsumer(
+        kafka_topic,
+        bootstrap_servers=broker,
+        max_partition_fetch_bytes=20971520,
+        consumer_timeout_ms=5000,
+        auto_offset_reset='earliest',
+        enable_auto_commit=False,
+        value_deserializer=lambda m: json.loads(m.decode('utf-8')))
 
     print("processing...")
     for message in consumer:
-        print(message.value)
-        print(type(message.value))
-
-    consumer.close()
+        value = message.value
+            
+        for k in key:
+            value = value[k]
+            
+        if type(value) == list:
+            for v in value:
+                print(v)
+        else:
+            print(value)
+                
     print("done.")
 
-
-# kafka_to_json("theculturetrip")
-kafka_to_json_review("tripad_attr_review")
-
-# theculturetrip url
-# kafka_to_hbase(KAFKA_TOPICS[0], ["props, pageProps, articleStoreState, articleData, data, link"], ["m:url"])
-
-# tripadvisor location
-# kafka_to_hbase(KAFKA_TOPICS[1], ["web_url"], ["m:url"])
-
-# tripadvisor activity
-# kafka_to_hbase(KAFKA_TOPICS[2], ["productHeader", "activityId"], ["m:activityId"])
-
-# tripadvisor activity review
-# kafka_to_hbase(KAFKA_TOPICS[3], [0, "data", "locations", 0, "locationId"], ["m:locationId"])
-
-# message value and key are raw bytes -- decode if necessary!
-# e.g., for unicode: `message.value.decode('utf-8')`
-# print("%s:%d:%d: key=%s value=%s" % (message.topic, message.partition,
-#                                      message.offset, message.key,
-#                                      message.value))
