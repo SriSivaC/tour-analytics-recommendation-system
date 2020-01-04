@@ -1,9 +1,10 @@
-from nltk.corpus import wordnet
 import os
-from pyspark.sql import SparkSession
+import math
 from utils import Util
 from rbm import RBM
-import math
+
+from google_images_download import google_images_download
+from nltk.corpus import wordnet
 import nltk
 nltk.download('wordnet')
 
@@ -39,46 +40,41 @@ def sim_score(row):
         return 100
 
 
-def get_recc(spark, cat_rating):
-
-    # epochs = 50
-    # rows = 40000
-    # alpha = 0.01
-    # H = 128
-    # batch_size = 16
-
-    epochs = 20
-    rows = 5000
-    alpha = 0.01
-    H = 128
-    batch_size = 8
+def get_recc(spark, cat_rating, hyperparameter):
 
     util = Util()
+    # reading
     attractions, ratings = util.read_data(spark, parquet_path + 'etl/attractions'), util.read_data(spark, parquet_path + 'etl/attraction_reviews')
-    ratings = util.clean_subset(ratings, rows)
+    # processing
+    ratings = util.clean_subset(ratings, hyperparameter['rows'])
     rbm_att, train = util.preprocess(ratings)
-
+    # modeling
     num_vis = len(ratings)
-    rbm = RBM(alpha, H, num_vis)
-
+    rbm = RBM(hyperparameter['alpha'], hyperparameter['H'], num_vis)
+    # joining
     joined = ratings.set_index('activityId').join(
         attractions[["activityId", "category"]].set_index("activityId")).reset_index('activityId')
-
+    joined['user_id'] = joined.index
+    # grouping
     grouped = joined.groupby('user_id')
     category_df = grouped['category'].apply(list).reset_index()
     rating_df = grouped['rating'].apply(list).reset_index()
+    # applying
     cat_rat_df = category_df.set_index('user_id').join(rating_df.set_index('user_id'))
     cat_rat_df['cat_rat'] = cat_rat_df.apply(f, axis=1)
     cat_rat_df = cat_rat_df.reset_index()[['user_id', 'cat_rat']]
-
     cat_rat_df['user_data'] = [cat_rating for i in range(len(cat_rat_df))]
     cat_rat_df['sim_score'] = cat_rat_df.apply(sim_score, axis=1)
     user = cat_rat_df.sort_values(['sim_score']).values[0][0]
-
+    # showing
     print("Similar User: {u}".format(u=user))
-    filename = "e"+str(epochs)+"_r"+str(rows)+"_lr"+str(alpha)+"_hu"+str(H)+"_bs"+str(batch_size)
+    filename = "e"+str(hyperparameter['epochs'])+"_r"+str(hyperparameter['rows'])+"_lr" + \
+        str(hyperparameter['alpha'])+"_hu"+str(hyperparameter['H'])+"_bs"+str(hyperparameter['batch_size'])
+    # loading
     reco, weights, vb, hb = rbm.load_predict(filename, train, user)
+    # calculating
     unseen, seen = rbm.calculate_scores(ratings, attractions, reco, user)
+    # exporting
     rbm.export(unseen, seen, 'rbm_models/'+filename, str(user))
     return filename, user, rbm_att
 
@@ -98,7 +94,7 @@ def filter_df(spark, filename, user, budget_low, budget_high, destination, att_d
                                         "score", ascending=False)
 
     filtered = recommendation[(recommendation.city == destination)
-                              & (recommendation.price >= budget_low) |
+                              & (recommendation.price >= budget_low) &
                               (recommendation.price <= budget_high)]
 
     # read spark dataframe from parquet
@@ -113,6 +109,21 @@ def filter_df(spark, filename, user, budget_low, budget_high, destination, att_d
     return with_url
 
 
+def get_place_photo_url(place, width=500):
+    response = google_images_download.googleimagesdownload()  # class instantiation
+    arguments = {
+        "keywords": place.encode("ascii", errors="ignore").decode(),
+        "limit": 1,
+        "print_urls": True,
+        "no_download": True
+    }  # creating list of arguments
+    paths = response.download(arguments)  # passing the arguments to the function
+    try:
+        return list(paths[0].values())[0][0]
+    except:
+        get_place_photo_url(place)
+
+
 def top_recc(with_url, final):
     for i in range(len(with_url)):
         first_recc = with_url.iloc[[i]]
@@ -124,7 +135,7 @@ def top_recc(with_url, final):
             final['price'].append(first_recc['price'].values.T[0])
             final['rating'].append(first_recc['rating'].values.T[0])
             final['category'].append(first_recc['category'].values.T[0])
-#             final['image'].append(get_image(first_recc['name'].values.T[0]))
+            final['image'].append(get_place_photo_url(first_recc['name'].values.T[0]))
             return final
     return final
 
@@ -153,4 +164,34 @@ def find_closest(with_url, loc, tod, final):
     else:
         mask = sorted_d.name.apply(lambda x: all(j not in x for j in evening))
     final = top_recc(sorted_d[mask], final)
+    return final
+
+
+def get_recc_final(with_url, start_date, end_date):
+    final = dict()
+    final['timeofday'] = []
+    final['name'] = []
+    final['location'] = []
+    final['price'] = []
+    final['rating'] = []
+    final['category'] = []
+    final['image'] = []
+
+    # 4 recommeded attraction per day, two for morning and two for evening
+    for i in range((end_date - start_date).days + 1):
+        for j in range(2):
+            final['timeofday'].append('Morning')
+        for j in range(2):
+            final['timeofday'].append('Evening')
+
+    for i in range(len(final['timeofday'])):  # 16
+        if i % 4 == 0:
+            final = top_recc(with_url, final)
+        else:
+            if i == len(final['name']):
+                final = top_recc(with_url, final)
+            else:
+                final = find_closest(with_url, final['location'][-1],
+                                     final['timeofday'][i], final)
+
     return final

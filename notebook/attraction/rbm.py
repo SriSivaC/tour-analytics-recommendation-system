@@ -1,8 +1,9 @@
+import os
 import matplotlib
 from utils import Util
 from IPython.display import display
+
 from sklearn import preprocessing
-import os
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
@@ -168,7 +169,7 @@ class RBM(object):
 
         """ Recommend User what books he has not read yet """
         # Find the mock user's user_id from the data
-#         cur_user_id = ratings[ratings['user_id']
+        # cur_user_id = ratings[ratings['user_id']
 
         # Find all books the mock user has read before
         visited_places = ratings[ratings['userId'] == user]['activityId']
@@ -252,10 +253,10 @@ class RBM(object):
 
         seen.to_csv(filename+'/user'+user+'_seen.csv')
         sorted_result.to_csv(filename+'/user'+user+'_unseen.csv')
-#         print('The attractions visited by the user are:')
-#         print(seen)
-#         print('The attractions recommended to the user are:')
-#         print(sorted_result)
+        # print('The attractions visited by the user are:')
+        # print(seen)
+        # print('The attractions recommended to the user are:')
+        # print(sorted_result)
 
     def export_errors_plot(self, filename):
         plt.plot(self.errors)

@@ -2,20 +2,20 @@
 Utility class with some helper functions
 '''
 
+import os
 import pandas as pd
 import numpy as np
 import random
-import os
 
 
 class Util(object):
-    def read_data(self, sparkSession, filepath):
+    def read_data(self, spark, filepath):
         '''
         Function to read data required to
         build the recommender system
         '''
         print("Reading the data from " + filepath)
-        return sparkSession.read.parquet(filepath).toPandas()
+        return spark.read.parquet(filepath).toPandas()
 
     def clean_subset(self, ratings, num_rows):
         '''
