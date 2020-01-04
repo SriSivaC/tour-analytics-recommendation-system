@@ -6,9 +6,13 @@ from crawler.items import TheculturetripItem
 
 
 class CultureTripSpider(scrapy.Spider):
+    # scrapy crawl theculturetrip
     name = "theculturetrip"
 
     custom_settings = {
+        'JOBDIR': 'crawls/theculturetrip',
+        'LOG_FILE': 'theculturetrip.log',
+        'LOG_LEVEL': 'INFO',
         'DOWNLOAD_DELAY': 3,
         'ITEM_PIPELINES': {
             'crawler.pipelines.KafkaPipeline': 300,
