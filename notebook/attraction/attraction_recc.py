@@ -117,11 +117,16 @@ def get_place_photo_url(place, width=500):
         "keywords": place.encode("ascii", errors="ignore").decode(),
         "limit": 1,
         "print_urls": True,
-        "no_download": True
+        "no_download": True,
+        "silent_mode": True,
+        "delay": 0
     }  # creating list of arguments
     paths = response.download(arguments)  # passing the arguments to the function
     try:
-        return list(paths[0].values())[0][0]
+        if list(paths[0].values())[0][0] is not None:
+            return list(paths[0].values())[0][0]
+        else:
+            get_place_photo_url(place)
     except:
         get_place_photo_url(place)
 
