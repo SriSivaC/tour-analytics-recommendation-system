@@ -1,15 +1,21 @@
-import flask
-from flask import request, jsonify
-from pyspark.sql import SparkSession
-# from attraction_recc import *
-import sys
-
-# initiate spark session
-spark = SparkSession.builder.appName('attraction').getOrCreate()
-
+import os, sys
 ROOT_DIR = '/home/hduser/document/jupyter/FYP/'
 if ROOT_DIR not in sys.path:
     sys.path.insert(0, ROOT_DIR)
+
+ATTRACTION_DIR = os.path.abspath('/home/hduser/document/jupyter/FYP/notebook/attraction/') 
+if ATTRACTION_DIR not in sys.path:
+    sys.path.insert(0, ATTRACTION_DIR)
+
+import flask
+from flask import request, jsonify
+from pyspark.sql import SparkSession
+from attraction_recc import get_recc, filter_df, get_recc_final
+import re
+from datetime import timedelta, date, datetime
+
+# initiate spark session
+spark = SparkSession.builder.appName('attraction').getOrCreate()
 
 # define path
 ds_dir = ROOT_DIR + '/crawler/datasets/tripadvisor_dataset/attractions/'
@@ -23,6 +29,10 @@ hyperparameter = {
     'H': 128
 }
 
+# read spark dataframe from parquet
+final_attr_spark_df = spark.read.parquet(spark_warehouse_dir + 'etl/attractions')
+final_attr_spark_df.createOrReplaceTempView('final_attr_spark_df')
+
 app = flask.Flask(__name__)
 app.config["DEBUG"] = True
 
@@ -31,38 +41,78 @@ app.config["DEBUG"] = True
 def home():
     return "<h1>Travangel Flask API</h1><p>This site is a prototype API for Tour Analytics Final Year Project.</p>"
 
-# A route to return all of the available entries in our catalog.
+
+# A route to return all of the available entries in our database.
 @app.route('/api/v1/data/attractions/category', methods=['GET'])
 def api_category():
-    # read spark dataframe from parquet
-    final_attr_spark_df = spark.read.parquet(spark_warehouse_dir + 'etl/attractions')
     attr_category_df = final_attr_spark_df.select(final_attr_spark_df.category).distinct().toPandas()
+
     attr_category_list = attr_category_df.category.tolist()
-    return jsonify(attr_category_list)
+    attr_category = {'category':[re.sub('_', ' ', cat.capitalize()) for cat in attr_category_list]}
+
+    return jsonify(attr_category)
 
 
-@app.route('/api/v1/resources/books', methods=['GET'])
-def api_id():
-    # Check if an ID was provided as part of the URL.
-    # If ID is provided, assign it to a variable.
-    # If no ID is provided, display an error in the browser.
-    if 'id' in request.args:
-        id = int(request.args['id'])
+# A route to return all of the available entries in our database.
+@app.route('/api/v1/data/attractions/city', methods=['GET'])
+def api_city():
+    attr_city_df = final_attr_spark_df.select(final_attr_spark_df.city).distinct().toPandas()
+
+    attr_city_list = attr_city_df.city.tolist()
+    attr_city = {'city': attr_city_list}
+
+    return jsonify(attr_city)
+
+
+# A route to return all of the available entries in our database.
+@app.route('/api/v1/data/attractions/price', methods=['GET'])
+def api_price():
+    attr_price_spark_df = spark.sql("SELECT MIN(price) as min_price, MAX(price) as max_price FROM final_attr_spark_df")
+
+    attr_price_df = attr_price_spark_df.toPandas()
+    attr_price = {'min_price': attr_price_df.min_price[0], 'max_price': attr_price_df.max_price[0]}
+
+    return jsonify(attr_price)
+
+
+# A route to return all of the available entries in our database.
+@app.route('/api/v1/data/attractions/recommendation', methods=['GET'])
+def api_attr_recc():
+
+    if 'location' in request.args:
+        location = str(request.args['location'])
+        location = re.sub('_', ' ', location).title()
     else:
-        return "Error: No id field provided. Please specify an id."
+        return "Error: No location field provided. Please specify a location."
 
-    # Create an empty list for our results
-    results = []
+    if 'start_date' in request.args:
+        start_date = str(request.args['start_date'])
+    else:
+        return "Error: No start_date field provided. Please specify a start_date."
 
-    # Loop through the data and match results that fit the requested ID.
-    # IDs are unique, but other fields might return many results
-    for book in books:
-        if book['id'] == id:
-            results.append(book)
+    if 'end_date' in request.args:
+        end_date = str(request.args['end_date'])
+    else:
+        return "Error: No end_date field provided. Please specify a end_date."
 
-    # Use the jsonify function from Flask to convert our list of
-    # Python dictionaries to the JSON format.
-    return jsonify(results)
+    attr_category_df = final_attr_spark_df.select(final_attr_spark_df.category).distinct().toPandas()
+    attr_price_spark_df = spark.sql("SELECT MIN(price) as min_price, MAX(price) as max_price FROM final_attr_spark_df")
+
+    attr_category_list = attr_category_df.category.tolist()
+    attr_price_df = attr_price_spark_df.toPandas()
+    budget_low = attr_price_df.min_price[0]
+    budget_high = attr_price_df.max_price[0]
+
+    start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+    end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+
+    cat_rating = {key: float(5.0) for key in attr_category_list}
+
+    filename, user, rbm_att = get_recc(spark, cat_rating, hyperparameter)
+    with_url = filter_df(spark, filename, user, budget_low, budget_high, location, final_attr_spark_df.toPandas())
+    final = get_recc_final(with_url, start_date, end_date)
+
+    return jsonify(final)
 
 
 @app.errorhandler(404)
@@ -71,4 +121,4 @@ def page_not_found(e):
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0')
+    app.run(host='0.0.0.0', port=8121)

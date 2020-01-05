@@ -11,6 +11,8 @@ import tensorflow.compat.v1 as tf
 tf.disable_v2_behavior()
 matplotlib.use('agg')
 
+ROOT_DIR = os.path.abspath('/home/hduser/document/jupyter/FYP/')
+rbm_models_dir = ROOT_DIR + '/notebook/attraction/rbm_models/'
 
 class RBM(object):
     '''
@@ -139,9 +141,9 @@ class RBM(object):
         W = tf.placeholder(tf.float32, [self.num_vis, self.num_hid])  # Weight Matrix
         v0 = tf.placeholder(tf.float32, [None, self.num_vis])
 
-        prv_w = np.load('rbm_models/'+filename+'/w.npy')
-        prv_vb = np.load('rbm_models/'+filename+'/vb.npy')
-        prv_hb = np.load('rbm_models/'+filename+'/hb.npy')
+        prv_w = np.load(rbm_models_dir+filename+'/w.npy')
+        prv_vb = np.load(rbm_models_dir+filename+'/vb.npy')
+        prv_hb = np.load(rbm_models_dir+filename+'/hb.npy')
 
         config = tf.ConfigProto()
         config.gpu_options.allow_growth = True

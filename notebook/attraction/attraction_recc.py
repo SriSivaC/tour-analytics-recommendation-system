@@ -12,6 +12,7 @@ nltk.download('wordnet')
 ROOT_DIR = os.path.abspath('/home/hduser/document/jupyter/FYP/')
 ds_dir = ROOT_DIR + '/crawler/datasets/tripadvisor_dataset/attractions/'
 spark_warehouse_dir = ROOT_DIR + '/crawler/datasets/tripadvisor_dataset/attractions/spark-warehouse/'
+rbm_models_dir = ROOT_DIR + '/notebook/attraction/rbm_models/'
 
 
 def f(row):
@@ -76,12 +77,12 @@ def get_recc(spark, cat_rating, hyperparameter):
     # calculating
     unseen, seen = rbm.calculate_scores(ratings, attractions, reco, user)
     # exporting
-    rbm.export(unseen, seen, 'rbm_models/'+filename, str(user))
+    rbm.export(unseen, seen, rbm_models_dir + filename, str(user))
     return filename, user, rbm_att
 
 
 def filter_df(spark, filename, user, budget_low, budget_high, destination, att_df):
-    df = spark.read.csv('rbm_models/' + filename + '/user{u}_unseen.csv'.format(u=user), header=True, sep=",")
+    df = spark.read.csv(rbm_models_dir + filename + '/user{u}_unseen.csv'.format(u=user), header=True, sep=",")
     recc_df = df.toPandas().set_index('_c0')
     del recc_df.index.name
     recc_df.columns = ['activityId', 'att_name', 'att_cat', 'att_price', 'score']
