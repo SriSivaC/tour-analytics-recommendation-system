@@ -115,6 +115,54 @@ def api_attr_recc():
     return jsonify(final)
 
 
+# A route to return all of the available entries in our database.
+@app.route('/api/v1/data/attractions/triplaner', methods=['GET'])
+def api_triplanner():
+
+    if 'location' in request.args:
+        location = str(request.args['location'])
+        location = re.sub('_', ' ', location).title()
+    else:
+        return "Error: No location field provided. Please specify a location."
+
+    if 'start_date' in request.args:
+        start_date = str(request.args['start_date'])
+    else:
+        return "Error: No start_date field provided. Please specify a start_date."
+
+    if 'end_date' in request.args:
+        end_date = str(request.args['end_date'])
+    else:
+        return "Error: No end_date field provided. Please specify a end_date."
+
+    if 'budget_low' in request.args:
+        budget_low = float(request.args['budget_low'])
+    else:
+        return "Error: No budget_low field provided. Please specify a budget_low."
+
+    if 'budget_high' in request.args:
+        budget_high = float(request.args['budget_high'])
+    else:
+        return "Error: No budget_high field provided. Please specify a budget_high."
+
+    if 'category' in request.args:
+        category = str(request.args['category'])
+    else:
+        return "Error: No cat_rating field provided. Please specify a cat_rating."
+
+    start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+    end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+
+    attr_category_list = category.split('+')
+    cat_rating = {key: float(5.0) for key in attr_category_list}
+
+    filename, user, rbm_att = get_recc(spark, cat_rating, hyperparameter)
+    with_url = filter_df(spark, filename, user, budget_low, budget_high, location, final_attr_spark_df.toPandas())
+    final = get_recc_final(with_url, start_date, end_date)
+
+    return jsonify(final)
+
+
 @app.errorhandler(404)
 def page_not_found(e):
     return "<h1>404</h1><p>The resource could not be found.</p>", 404
